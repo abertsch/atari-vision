@@ -1,6 +1,5 @@
 package edu.brown.cs.atari_vision.spaceinvaders.cv;
 
-import edu.brown.cs.atari_vision.ale.burlap.ALEDomainConstants;
 import edu.brown.cs.atari_vision.spaceinvaders.SIDomainConstants;
 import org.bytedeco.javacpp.indexer.DoubleIndexer;
 

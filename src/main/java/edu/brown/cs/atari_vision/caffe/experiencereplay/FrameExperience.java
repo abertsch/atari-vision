@@ -17,12 +17,12 @@ public class FrameExperience implements Serializable {
     public boolean terminated;
 
     /** The state from which the action was taken */
-    public Frame o;
+    public FrameHistory o;
 
     /** The state at which the agent arrived */
-    public Frame op;
+    public FrameHistory op;
 
-    public FrameExperience(Frame o, int a, Frame op, double r, boolean terminated) {
+    public FrameExperience(FrameHistory o, int a, FrameHistory op, double r, boolean terminated) {
         this.o = o;
         this.a = a;
         this.op = op;

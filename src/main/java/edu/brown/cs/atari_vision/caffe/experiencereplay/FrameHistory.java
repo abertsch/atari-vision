@@ -8,13 +8,13 @@ import java.util.List;
 /**
  * Created by MelRod on 5/27/16.
  */
-public class Frame implements State, Serializable {
+public class FrameHistory implements State, Serializable {
 
     public long index;
     public int historyLength;
 
 
-    Frame(long index, int historyLength) {
+    FrameHistory(long index, int historyLength) {
         this.index = index;
         this.historyLength = historyLength;
     }

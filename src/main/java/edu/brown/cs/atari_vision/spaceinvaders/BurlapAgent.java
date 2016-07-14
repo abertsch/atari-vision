@@ -6,7 +6,7 @@ import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.SADomain;
 import burlap.shell.visual.VisualExplorer;
 import burlap.visualizer.Visualizer;
-import edu.brown.cs.atari_vision.ale.burlap.ALEEnvironment;
+import edu.brown.cs.burlap.ALEEnvironment;
 
 /**
  * Created by MelRod on 3/22/16.
@@ -26,7 +26,7 @@ public class BurlapAgent {
         this.policy = policy;
         this.vis = vis;
 
-        env = new ALEEnvironment(domain, alePath, rom);
+        env = new ALEEnvironment(alePath, rom);
     }
 
     public void run(int episodes) {

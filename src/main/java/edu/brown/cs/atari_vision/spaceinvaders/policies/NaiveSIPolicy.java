@@ -8,7 +8,6 @@ import burlap.mdp.core.oo.state.OOState;
 import burlap.mdp.core.oo.state.ObjectInstance;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.oo.OOSADomain;
-import edu.brown.cs.atari_vision.ale.burlap.ALEDomainConstants;
 import burlap.behavior.policy.Policy;
 import edu.brown.cs.atari_vision.spaceinvaders.SIDomainConstants;
 

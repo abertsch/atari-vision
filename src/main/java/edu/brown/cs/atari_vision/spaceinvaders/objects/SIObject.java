@@ -2,7 +2,6 @@ package edu.brown.cs.atari_vision.spaceinvaders.objects;
 
 import burlap.mdp.core.oo.state.ObjectInstance;
 import burlap.mdp.core.state.UnknownKeyException;
-import edu.brown.cs.atari_vision.ale.burlap.ALEDomainConstants;
 import edu.brown.cs.atari_vision.spaceinvaders.SIDomainConstants;
 
 import java.util.Arrays;

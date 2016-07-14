@@ -7,7 +7,7 @@ import burlap.mdp.core.action.Action;
 import burlap.mdp.core.oo.state.OOState;
 import burlap.mdp.core.oo.state.ObjectInstance;
 import burlap.mdp.core.state.State;
-import edu.brown.cs.atari_vision.ale.io.Actions;
+import edu.brown.cs.burlap.io.Actions;
 
 import java.io.Serializable;
 import java.util.BitSet;

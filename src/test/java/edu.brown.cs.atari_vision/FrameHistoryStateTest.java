@@ -3,7 +3,7 @@
 //import burlap.mdp.core.action.Action;
 //import edu.brown.cs.atari_vision.caffe.action.ActionSet;
 //import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameExperienceMemory;
-//import edu.brown.cs.atari_vision.caffe.experiencereplay.Frame;
+//import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameHistory;
 //import edu.brown.cs.atari_vision.caffe.preprocess.PreProcessor;
 //import edu.brown.cs.atari_vision.caffe.vfa.NNStateConverter;
 //import org.bytedeco.javacpp.BytePointer;
@@ -65,11 +65,11 @@
 //        Action action0 = actionSet.get(0);
 //
 //        FrameExperienceMemory experienceMemory = new FrameExperienceMemory(5, 2, new TestPreprocessor(2), actionSet);
-//        Frame state0 = experienceMemory.initialState(null);
-//        Frame state1 = experienceMemory.nextState(frame1, state0, action0, 0, false);
-//        Frame state2 = experienceMemory.nextState(frame2, state1, action0, 0, false);
-//        Frame state3 = experienceMemory.nextState(frame3, state2, action0, 0, false);
-//        Frame state4 = experienceMemory.nextState(frame4, state3, action0, 0, false);
+//        FrameHistory state0 = experienceMemory.initialState(null);
+//        FrameHistory state1 = experienceMemory.nextState(frame1, state0, action0, 0, false);
+//        FrameHistory state2 = experienceMemory.nextState(frame2, state1, action0, 0, false);
+//        FrameHistory state3 = experienceMemory.nextState(frame3, state2, action0, 0, false);
+//        FrameHistory state4 = experienceMemory.nextState(frame4, state3, action0, 0, false);
 //
 //        compare(state0, experienceMemory, new BytePointer[]{data0, data0}, 2);
 //        compare(state1, experienceMemory, new BytePointer[]{data0, data1}, 2);
@@ -77,9 +77,9 @@
 //        compare(state3, experienceMemory, new BytePointer[]{data2, data3}, 2);
 //        compare(state4, experienceMemory, new BytePointer[]{data3, data4}, 2);
 //
-//        Frame state5 = experienceMemory.nextState(frame5, state4, action0, 0, false);
-//        Frame state6 = experienceMemory.nextState(frame6, state5, action0, 0, false);
-//        Frame state7 = experienceMemory.nextState(frame7, state6, action0, 0, false);
+//        FrameHistory state5 = experienceMemory.nextState(frame5, state4, action0, 0, false);
+//        FrameHistory state6 = experienceMemory.nextState(frame6, state5, action0, 0, false);
+//        FrameHistory state7 = experienceMemory.nextState(frame7, state6, action0, 0, false);
 //
 //        compare(state3, experienceMemory, new BytePointer[]{data2, data3}, 2);
 //        compare(state4, experienceMemory, new BytePointer[]{data3, data4}, 2);
@@ -99,7 +99,7 @@
 //        Action action0 = actionSet.getAction(0);
 //
 //        FrameExperienceMemory experienceMemory = new FrameExperienceMemory(replaySize, history, new TestPreprocessor(frameSize), actionSet);
-//        Frame initialState = experienceMemory.initialState(null);
+//        FrameHistory initialState = experienceMemory.initialState(null);
 //        BytePointer data0 = new BytePointer(history);
 //        for (int f = 0; f < frameSize; f++) {
 //            data0.position(f).put((byte)0);
@@ -113,9 +113,9 @@
 //
 //        List<List<BytePointer>> dataListList = new ArrayList<>();
 //
-//        List<Frame> states = new ArrayList<>();
+//        List<FrameHistory> states = new ArrayList<>();
 //
-//        Frame prevState = initialState;
+//        FrameHistory prevState = initialState;
 //
 //        for (int n = 0; n < 100; n++) {
 //            for (int i = 0; i < replaySize; i++) {
@@ -130,7 +130,7 @@
 //
 //                Mat frame = new Mat(1, frameSize, CV_8U, data);
 //
-//                Frame state = experienceMemory.nextState(frame, prevState, action0, 0, false);
+//                FrameHistory state = experienceMemory.nextState(frame, prevState, action0, 0, false);
 //                prevState = state;
 //
 //                compare(state, experienceMemory, dataList.toArray(new BytePointer[history]), frameSize);
@@ -150,7 +150,7 @@
 //        }
 //    }
 //
-//    public void compare(Frame state, NNStateConverter<Frame> stateConverter, BytePointer[]dataArray, long outputSize) {
+//    public void compare(FrameHistory state, NNStateConverter<FrameHistory> stateConverter, BytePointer[]dataArray, long outputSize) {
 //        stateConverter.getStateInput(state, input);
 //
 //        int i = 0;

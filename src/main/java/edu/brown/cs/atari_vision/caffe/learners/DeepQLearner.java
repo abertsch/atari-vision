@@ -2,6 +2,8 @@ package edu.brown.cs.atari_vision.caffe.learners;
 
 import burlap.behavior.policy.Policy;
 import burlap.behavior.policy.RandomPolicy;
+import burlap.mdp.auxiliary.StateMapping;
+import burlap.mdp.auxiliary.common.ShallowIdentityStateMapping;
 import burlap.mdp.singleagent.SADomain;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
 import edu.brown.cs.atari_vision.caffe.policies.StatefulPolicy;
@@ -22,7 +24,10 @@ public class DeepQLearner extends ApproximateQLearning {
     public Policy trainingPolicy;
 
     public DeepQLearner(SADomain domain, double gamma, int replayStartSize, Policy policy, DQN vfa) {
-        super(domain, gamma, vfa);
+        this(domain, gamma, replayStartSize, policy, vfa, new ShallowIdentityStateMapping());
+    }
+    public DeepQLearner(SADomain domain, double gamma, int replayStartSize, Policy policy, DQN vfa, StateMapping stateMapping) {
+        super(domain, gamma, vfa, stateMapping);
 
         // Finds backup using previous parameters
         this.useStaleTarget(10000);

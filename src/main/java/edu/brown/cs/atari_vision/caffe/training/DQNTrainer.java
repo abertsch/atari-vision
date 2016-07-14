@@ -4,15 +4,16 @@ import burlap.behavior.policy.EpsilonGreedy;
 import burlap.behavior.policy.Policy;
 import burlap.mdp.singleagent.SADomain;
 import burlap.mdp.singleagent.environment.Environment;
-import edu.brown.cs.atari_vision.ale.burlap.ALEDomainGenerator;
-import edu.brown.cs.atari_vision.ale.burlap.ALEEnvironment;
 import edu.brown.cs.atari_vision.caffe.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameExperienceMemory;
 import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
-import edu.brown.cs.atari_vision.caffe.experiencereplay.Frame;
 import edu.brown.cs.atari_vision.caffe.policies.AnnealedEpsilonGreedy;
 import edu.brown.cs.atari_vision.caffe.preprocess.DQNPreProcessor;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
+import edu.brown.cs.burlap.ALEDomainGenerator;
+import edu.brown.cs.burlap.ALEEnvironment;
+import edu.brown.cs.burlap.gui.ALEVisualExplorer;
+import edu.brown.cs.burlap.gui.ALEVisualizer;
 import org.bytedeco.javacpp.Loader;
 
 import static org.bytedeco.javacpp.caffe.*;
@@ -24,7 +25,7 @@ public class DQNTrainer extends TrainingHelper {
 
     static final String SOLVER_FILE = "dqn_solver.prototxt";
     static final String alePath = "/home/maroderi/projects/Arcade-Learning-Environment/ale";
-    static final String ROM = "pong.bin";
+    static final String ROM = "/home/maroderi/projects/atari_roms/breakout.bin";
     static final boolean GUI = true;
 
     static final int experienceMemoryLength = 1000000;
@@ -37,6 +38,9 @@ public class DQNTrainer extends TrainingHelper {
 
     static final double gamma = 0.99;
 
+    static final String[] actionNames = {
+            "player_a_noop", "player_a_right", "player_a_left", "player_a_fire"
+    };
 
 
     protected FrameExperienceMemory trainingMemory;
@@ -65,20 +69,23 @@ public class DQNTrainer extends TrainingHelper {
 
         Loader.load(Caffe.class);
 
-        ActionSet actionSet = new ActionSet(ALEDomainGenerator.pongActionSet());
-
-        ALEDomainGenerator domGen = new ALEDomainGenerator(ALEDomainGenerator.pongActionSet());
+        ALEDomainGenerator domGen = new ALEDomainGenerator(actionNames);
         SADomain domain = domGen.generateDomain();
 
+        ActionSet actionSet = new ActionSet(domain);
+
         FrameExperienceMemory trainingExperienceMemory = new FrameExperienceMemory(experienceMemoryLength, maxHistoryLength, new DQNPreProcessor(), actionSet);
-        ALEEnvironment env = new ALEEnvironment(domain, alePath, ROM, frameSkip);
+        ALEEnvironment env = new ALEEnvironment(alePath, ROM, frameSkip);
+        ALEVisualExplorer exp = new ALEVisualExplorer(domain, env, ALEVisualizer.create());
+        exp.initGUI();
+        exp.startLiveStatePolling(1000/60);
 
         FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(10000, maxHistoryLength, new DQNPreProcessor(), actionSet);
 
         DQN dqn = new DQN(SOLVER_FILE, actionSet, trainingExperienceMemory, gamma);
         Policy policy = new AnnealedEpsilonGreedy(dqn, epsilonStart, epsilonEnd, epsilonAnnealDuration);
 
-        DeepQLearner deepQLearner = new DeepQLearner(domain, gamma, 50000, policy, dqn);
+        DeepQLearner deepQLearner = new DeepQLearner(domain, gamma, 50000, policy, dqn, trainingExperienceMemory);
         deepQLearner.setExperienceReplay(trainingExperienceMemory, dqn.batchSize);
 
         Policy testPolicy = new EpsilonGreedy(dqn, 0.05);
@@ -89,7 +96,7 @@ public class DQNTrainer extends TrainingHelper {
         helper.setTestInterval(100000);
         helper.setNumTestEpisodes(10);
         helper.setMaxEpisodeSteps(20000);
-        helper.enableSnapshots("networks/dqn/pong", 1000000);
+        helper.enableSnapshots("networks/dqn/breakout_temp", 1000000);
 
         // load learning state if resuming
 //        helper.loadLearningState("networks/dqn/pong");

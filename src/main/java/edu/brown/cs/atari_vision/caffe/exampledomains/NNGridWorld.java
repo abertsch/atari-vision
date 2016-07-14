@@ -32,7 +32,7 @@ import edu.brown.cs.atari_vision.caffe.policies.AnnealedEpsilonGreedy;
 import edu.brown.cs.atari_vision.caffe.training.SimpleTrainer;
 import edu.brown.cs.atari_vision.caffe.training.TrainingHelper;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
-import edu.brown.cs.atari_vision.caffe.vfa.NNStateConverter;
+import edu.brown.cs.atari_vision.caffe.vfa.StateVectorizor;
 import org.bytedeco.javacpp.FloatPointer;
 
 
@@ -117,10 +117,10 @@ public class NNGridWorld {
         helper.run();
     }
 
-    class NNGridStateConverter implements NNStateConverter {
+    class NNGridStateConverter implements StateVectorizor {
 
         @Override
-        public void convertState(State state, FloatPointer input) {
+        public void vectorizeState(State state, FloatPointer input) {
             GridWorldState gwState = (GridWorldState) state;
 
             int width = gwdg.getWidth();

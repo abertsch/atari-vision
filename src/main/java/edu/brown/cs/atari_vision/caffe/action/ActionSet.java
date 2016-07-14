@@ -1,10 +1,9 @@
 package edu.brown.cs.atari_vision.caffe.action;
 
 
-import burlap.mdp.core.action.Action;
-import burlap.mdp.core.action.ActionType;
-import burlap.mdp.core.action.SimpleAction;
-import burlap.mdp.core.action.UniversalActionType;
+import burlap.mdp.core.Domain;
+import burlap.mdp.core.action.*;
+import burlap.mdp.singleagent.SADomain;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,9 +16,23 @@ import java.util.Map;
 public class ActionSet {
 
     protected Action[] actions;
-    protected Map<Action, Integer> actionMap;
+    protected Map<String, Integer> actionMap;
     protected int size;
 
+    public ActionSet(SADomain domain) {
+        List<Action> actionList = ActionUtils.allApplicableActionsForTypes(domain.getActionTypes(), null);
+        size = actionList.size();
+        actions = new Action[size];
+        actionList.toArray(actions);
+
+        initActionMap();
+    }
+    public ActionSet(Action[] actions) {
+        this.actions = actions;
+        size = actions.length;
+
+        initActionMap();
+    }
     public ActionSet(String[] actionNames) {
         size = actionNames.length;
         actions = new Action[size];
@@ -30,17 +43,10 @@ public class ActionSet {
         initActionMap();
     }
 
-    public ActionSet(Action[] actions) {
-        this.actions = actions;
-        size = actions.length;
-
-        initActionMap();
-    }
-
     protected void initActionMap() {
         actionMap = new HashMap<>();
         for (int i = 0; i < actions.length; i++) {
-            actionMap.put(actions[i], i);
+            actionMap.put(actions[i].actionName(), i);
         }
     }
 
@@ -48,8 +54,11 @@ public class ActionSet {
         return actions[i];
     }
 
-    public int map(Action action) {
+    public int map(String action) {
         return actionMap.get(action);
+    }
+    public int map(Action action) {
+        return actionMap.get(action.actionName());
     }
 
     public int size() {

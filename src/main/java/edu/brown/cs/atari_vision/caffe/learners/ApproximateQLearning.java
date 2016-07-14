@@ -9,6 +9,8 @@ import burlap.behavior.singleagent.learning.LearningAgent;
 import burlap.behavior.singleagent.options.EnvironmentOptionOutcome;
 import burlap.behavior.valuefunction.QProvider;
 import burlap.behavior.valuefunction.QValue;
+import burlap.mdp.auxiliary.StateMapping;
+import burlap.mdp.auxiliary.common.ShallowIdentityStateMapping;
 import burlap.mdp.core.action.Action;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.SADomain;
@@ -56,6 +58,12 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 
 
 	/**
+	 * The state mapping to convert between states
+	 */
+	protected StateMapping stateMapping;
+
+
+	/**
 	 * The number of experiences to use for learners
 	 */
 	protected int numReplay = 1;
@@ -86,9 +94,13 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 
 
 	public ApproximateQLearning(SADomain domain, double gamma, ParametricFunction.ParametricStateActionFunction vfa) {
+		this(domain, gamma, vfa, new ShallowIdentityStateMapping());
+	}
+	public ApproximateQLearning(SADomain domain, double gamma, ParametricFunction.ParametricStateActionFunction vfa, StateMapping stateMapping) {
 		this.vfa = vfa;
 		this.staleVfa = vfa;
 		this.learningPolicy = new EpsilonGreedy(this, 0.1);
+		this.stateMapping = stateMapping;
 
 		this.solverInit(domain, gamma, null);
 	}
@@ -127,14 +139,14 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 	public Episode runLearningEpisode(Environment env, int maxSteps) {
 
 		State initialState = env.currentObservation();
-		Episode ea = new Episode(initialState);
+		Episode e = new Episode(initialState);
 
 
 		int eStepCounter = 0;
 		while(!env.isInTerminalState() && (eStepCounter < maxSteps || maxSteps == -1)){
 
 			//check state
-			State curState = env.currentObservation();
+			State curState = stateMapping.mapState(env.currentObservation());
 
 			//select action
 			Action a = this.learningPolicy.action(curState);
@@ -149,7 +161,7 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 			int stepInc = eo instanceof EnvironmentOptionOutcome ? ((EnvironmentOptionOutcome)eo).numSteps() : 1;
 			eStepCounter += stepInc;
 			this.totalSteps += stepInc;
-			ea.transition(a, eo.op, eo.r);
+			e.transition(a, eo.op, eo.r);
 
 			//perform learners
 			List<EnvironmentOutcome> samples = this.memory.sampleExperiences(this.numReplay);
@@ -164,7 +176,7 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 		}
 
 		this.totalEpisodes++;
-		return ea;
+		return e;
 	}
 
 	@Override

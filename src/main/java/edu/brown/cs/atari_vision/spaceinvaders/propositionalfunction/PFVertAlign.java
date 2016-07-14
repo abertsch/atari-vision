@@ -2,7 +2,6 @@ package edu.brown.cs.atari_vision.spaceinvaders.propositionalfunction;
 
 import burlap.mdp.core.oo.state.OOState;
 import burlap.mdp.core.oo.state.ObjectInstance;
-import edu.brown.cs.atari_vision.ale.burlap.ALEDomainConstants;
 import burlap.mdp.core.oo.propositional.PropositionalFunction;
 import edu.brown.cs.atari_vision.spaceinvaders.SIDomainConstants;
 

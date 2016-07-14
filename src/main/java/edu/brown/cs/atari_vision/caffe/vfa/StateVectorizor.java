@@ -8,13 +8,13 @@ import static org.bytedeco.javacpp.caffe.*;
 /**
  * Created by MelRod on 5/27/16.
  */
-public interface NNStateConverter {
+public interface StateVectorizor {
 
     /**
-     * Converts a given state to Caffe input data (a float vector)
+     * Converts a given state to a float vector
      *
      * @param state The state to convert.
-     * @param input The float vector into which to put the input data.
+     * @param input The float vector into which to put the state vecotr.
      */
-    void convertState(State state, FloatPointer input);
+    void vectorizeState(State state, FloatPointer input);
 }

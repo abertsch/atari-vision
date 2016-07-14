@@ -50,7 +50,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
     public String qValuesBlobName = "q_values";
 
     /** An object to convert between BURLAP states and NN input */
-    public NNStateConverter stateConverter;
+    public StateVectorizor stateConverter;
 
     public double gamma;
 
@@ -69,7 +69,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
     protected FloatPointer dummyInputData;
     protected FloatBlob qValuesBlob;
 
-    public DQN(String caffeSolverFile, ActionSet actionSet, NNStateConverter stateConverter, double gamma) {
+    public DQN(String caffeSolverFile, ActionSet actionSet, StateVectorizor stateConverter, double gamma) {
         this.solverFile = caffeSolverFile;
         this.actionSet = actionSet;
         this.stateConverter = stateConverter;
@@ -140,9 +140,9 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
             EnvironmentOutcome eo = samples.get(i);
 
             int pos = i * inputSize;
-            stateConverter.convertState(eo.o, stateInputs.position(pos));
+            stateConverter.vectorizeState(eo.o, stateInputs.position(pos));
 
-            stateConverter.convertState(eo.op, primeStateInputs.position(pos));
+            stateConverter.vectorizeState(eo.op, primeStateInputs.position(pos));
         }
 
         // Forward pass states
@@ -194,7 +194,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
     }
 
     public FloatBlob qValuesForState(State state) {
-        stateConverter.convertState(state, stateInputs.position(0));
+        stateConverter.vectorizeState(state, stateInputs.position(0));
         inputDataIntoLayers(stateInputs, dummyInputData, dummyInputData);
         caffeNet.ForwardPrefilled();
         return qValuesBlob;

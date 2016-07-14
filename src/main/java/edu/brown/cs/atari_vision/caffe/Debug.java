@@ -1,6 +1,6 @@
 package edu.brown.cs.atari_vision.caffe;
 
-import edu.brown.cs.atari_vision.ale.screen.ScreenConverter;
+import edu.brown.cs.burlap.screen.ScreenConverter;
 import org.bytedeco.javacpp.BytePointer;
 import org.bytedeco.javacpp.FloatPointer;
 import org.bytedeco.javacpp.caffe;
