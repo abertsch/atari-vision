@@ -4,8 +4,11 @@ import burlap.behavior.policy.Policy;
 import burlap.behavior.policy.RandomPolicy;
 import burlap.mdp.singleagent.SADomain;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
+import edu.brown.cs.atari_vision.caffe.policies.StatefulPolicy;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
 
+import java.io.*;
+import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -67,8 +70,54 @@ public class DeepQLearner extends ApproximateQLearning {
     }
 
     @Override
-    public void restartFrom(int steps) {
-        super.restartFrom(steps);
+    public void saveLearningState(String filePrefix) {
+        // Save meta data
+        String dataFilename = filePrefix + "_learner.data";
+        HashMap<String, Object> data = new HashMap<>();
+        data.put("totalSteps", totalSteps);
+        data.put("totalEpisodes", totalEpisodes);
+        try (ObjectOutputStream objOut = new ObjectOutputStream(new FileOutputStream(dataFilename))) {
+            objOut.writeObject(data);
+        } catch (IOException e) {
+            System.out.println("Unable to save learning state");
+            e.printStackTrace();
+            return;
+        }
+
+        // Save experience memory
+        memory.saveMemory(filePrefix);
+
+        // Save Caffe data
+        ((DQN) vfa).saveLearningState(filePrefix);
+    }
+
+    @Override
+    public void loadLearningState(String filePrefix) {
+
+        // Load meta-data
+        String dataFilename = filePrefix + "_learner.data";
+        try (ObjectInputStream objIn = new ObjectInputStream(new FileInputStream(dataFilename))) {
+            HashMap<String, Object> data = (HashMap<String, Object>) objIn.readObject();
+
+            resumeFrom((Integer)data.get("totalSteps"), (Integer)data.get("totalEpisodes"));
+        } catch (FileNotFoundException e) {
+            System.out.println("No learning state found for specified file name");
+            e.printStackTrace();
+            return;
+        } catch (IOException e) {
+            System.out.println("Unable to load learning state");
+            e.printStackTrace();
+            return;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        // Load experience memory
+        memory.loadMemory(filePrefix);
+
+        // Load Caffe solver state
+        ((DQN)vfa).loadLearningState(filePrefix);
 
         if (runningRandomPolicy) {
             if (totalSteps >= replayStartSize) {
@@ -77,6 +126,11 @@ public class DeepQLearner extends ApproximateQLearning {
                 setLearningPolicy(trainingPolicy);
                 runningRandomPolicy = false;
             }
+        }
+
+        // If the policy depends on the iteration (i.e. AnnealedEpsilonGreedy) then load the state for the current step
+        if (this.learningPolicy instanceof StatefulPolicy) {
+            ((StatefulPolicy)this.learningPolicy).loadStateAt(this.totalSteps);
         }
     }
 }

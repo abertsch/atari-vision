@@ -10,8 +10,11 @@ import static org.bytedeco.javacpp.caffe.*;
  */
 public interface NNStateConverter {
 
-    void getStateInput(State state, FloatPointer input);
-
-    void saveMemoryState(String filePrefix);
-    void loadMemoryState(String filePrefix);
+    /**
+     * Converts a given state to Caffe input data (a float vector)
+     *
+     * @param state The state to convert.
+     * @param input The float vector into which to put the input data.
+     */
+    void convertState(State state, FloatPointer input);
 }

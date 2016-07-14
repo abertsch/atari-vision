@@ -10,9 +10,13 @@ import edu.brown.cs.atari_vision.caffe.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.visualizers.PongVisualizer;
 import org.bytedeco.javacpp.FloatPointer;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.bytedeco.javacpp.caffe.*;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -136,9 +140,9 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
             EnvironmentOutcome eo = samples.get(i);
 
             int pos = i * inputSize;
-            stateConverter.getStateInput(eo.o, stateInputs.position(pos));
+            stateConverter.convertState(eo.o, stateInputs.position(pos));
 
-            stateConverter.getStateInput(eo.op, primeStateInputs.position(pos));
+            stateConverter.convertState(eo.op, primeStateInputs.position(pos));
         }
 
         // Forward pass states
@@ -160,7 +164,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
                 y = (float)(eo.r + gamma*maxQ);
             }
 
-            int index = i*numActions + actionSet.map(eo.a.actionName());
+            int index = i*numActions + actionSet.map(eo.a);
             ys.put(index, y);
             actionFilter.put(index, 1);
         }
@@ -190,7 +194,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
     }
 
     public FloatBlob qValuesForState(State state) {
-        stateConverter.getStateInput(state, stateInputs.position(0));
+        stateConverter.convertState(state, stateInputs.position(0));
         inputDataIntoLayers(stateInputs, dummyInputData, dummyInputData);
         caffeNet.ForwardPrefilled();
         return qValuesBlob;
@@ -200,7 +204,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
     public double evaluate(State state, Action action) {
         FloatBlob output = qValuesForState(state);
 
-        int a = actionSet.map(action.actionName());
+        int a = actionSet.map(action);
         return output.data_at(0,a,0,0);
     }
 
@@ -215,9 +219,6 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
             QValue q = new QValue(state, actionSet.get(a), qValues.data_at(0, a, 0, 0));
             qValueList.add(q);
         }
-
-        // DEBUG
-        PongVisualizer.setQValues(qValueList);
 
         return qValueList;
     }
@@ -243,17 +244,26 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
         targetLayer.Reset(yData, dummyInputData, batchSize);
     }
 
-    /** Saves the experience memory, caffe solver state and weights, and metadata to disk */
+    /** Saves the caffe solver state and weights */
     public void saveLearningState(String filePrefix) {
-        stateConverter.saveMemoryState(filePrefix + "_state");
-
         caffeSolver.Snapshot();
+
+        // get file names
+        int iter = caffeSolver.iter();
+        String modelFile = String.format("_iter_%d.caffemodel", iter);
+        String solverFile = String.format("_iter_%d.solverstate", iter);
+
+        // move Caffe files
+        try {
+            Files.move(Paths.get(modelFile), Paths.get(filePrefix + ".caffemodel"), REPLACE_EXISTING);
+            Files.move(Paths.get(solverFile), Paths.get(filePrefix + ".solverstate"), REPLACE_EXISTING);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
-    public void loadLearningState(String filePrefix, String solverStateFile) {
-        caffeSolver.Restore(solverStateFile);
-
-        stateConverter.loadMemoryState(filePrefix + "_state");
+    public void loadLearningState(String filePrefix) {
+        caffeSolver.Restore(filePrefix + ".solverstate");
     }
 
     // Loading

@@ -2,6 +2,7 @@ package edu.brown.cs.atari_vision.caffe.experiencereplay;
 
 import burlap.debugtools.RandomFactory;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
+import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -89,5 +90,15 @@ public class FixedSizeMemory implements ExperienceMemory {
 	public void resetMemory() {
 		this.size = 0;
 		this.next = 0;
+	}
+
+	@Override
+	public void saveMemory(String filePrefix) {
+		throw new NotImplementedException();
+	}
+
+	@Override
+	public void loadMemory(String filePrefix) {
+		throw new NotImplementedException();
 	}
 }

@@ -8,7 +8,7 @@ import burlap.mdp.core.state.State;
 /**
  * Created by MelRod on 5/4/16.
  */
-public class AnnealedEpsilonGreedy extends EpsilonGreedy {
+public class AnnealedEpsilonGreedy extends EpsilonGreedy implements StatefulPolicy {
 
     protected double epsilonStart;
     protected double epsilonEnd;
@@ -37,5 +37,13 @@ public class AnnealedEpsilonGreedy extends EpsilonGreedy {
         }
 
         return action;
+    }
+
+    @Override
+    public void loadStateAt(int steps) {
+        epsilon += epsilonStep * steps;
+        if (epsilon < epsilonEnd) {
+            epsilon = epsilonEnd;
+        }
     }
 }

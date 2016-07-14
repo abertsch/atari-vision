@@ -7,7 +7,7 @@ import java.io.Serializable;
  */
 public class FrameExperience implements Serializable {
 
-    /** The action id of the action that was taken */
+    /** The ActionSet id of the action that was taken */
     public int a;
 
     /** The reward received */
@@ -19,7 +19,7 @@ public class FrameExperience implements Serializable {
     /** The state from which the action was taken */
     public Frame o;
 
-    /** The state to which the agent arrived at */
+    /** The state at which the agent arrived */
     public Frame op;
 
     public FrameExperience(Frame o, int a, Frame op, double r, boolean terminated) {

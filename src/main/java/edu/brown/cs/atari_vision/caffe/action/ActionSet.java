@@ -16,13 +16,13 @@ import java.util.Map;
  */
 public class ActionSet {
 
-    private Action[] actions;
-    private Map<Action, Integer> actionMap;
-    int size;
+    protected Action[] actions;
+    protected Map<Action, Integer> actionMap;
+    protected int size;
 
     public ActionSet(String[] actionNames) {
         size = actionNames.length;
-        Action[] actions = new Action[size];
+        actions = new Action[size];
         for (int i = 0; i < size; i++) {
             actions[i] = new SimpleAction(actionNames[i]);
         }
@@ -48,34 +48,11 @@ public class ActionSet {
         return actions[i];
     }
 
-    public int map(String action) {
+    public int map(Action action) {
         return actionMap.get(action);
     }
 
     public int size() {
         return size;
-    }
-
-    // TODO: remove
-//    public List<Action> actionList() {
-//        List<Action> actionList = new ArrayList<>(actions.length);
-//
-//        for (int i = 0; i < actions.length; i++) {
-//            Action a = new SimpleAction(actions[i]);
-//            actionList.add(a);
-//        }
-//
-//        return actionList;
-//    }
-//
-    public List<ActionType> actionTypeList() {
-        List<ActionType> actionList = new ArrayList<>(actions.length);
-
-        for (int i = 0; i < actions.length; i++) {
-            ActionType at = new UniversalActionType(actions[i]);
-            actionList.add(at);
-        }
-
-        return actionList;
     }
 }

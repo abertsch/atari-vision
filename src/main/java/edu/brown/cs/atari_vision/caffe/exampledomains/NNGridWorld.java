@@ -108,11 +108,10 @@ public class NNGridWorld {
 
         // setup helper
         TrainingHelper helper = new SimpleTrainer(deepQLearner, nnGridWorld.dqn, testPolicy, actionSet, nnGridWorld.env);
-        helper.setTotalTrainingFrames(50000000);
+        helper.setTotalTrainingSteps(50000000);
         helper.setTestInterval(500000);
         helper.setNumTestEpisodes(5);
-        helper.setNumSampleStates(1000);
-        helper.setMaxEpisodeFrames(10000);
+        helper.setMaxEpisodeSteps(10000);
 
         // run helper
         helper.run();
@@ -121,11 +120,10 @@ public class NNGridWorld {
     class NNGridStateConverter implements NNStateConverter {
 
         @Override
-        public void getStateInput(State state, FloatPointer input) {
+        public void convertState(State state, FloatPointer input) {
             GridWorldState gwState = (GridWorldState) state;
 
             int width = gwdg.getWidth();
-            int height = gwdg.getHeight();
 
             input.fill(0);
 
@@ -134,16 +132,6 @@ public class NNGridWorld {
             int y = (Integer)agent.get(GridWorldDomain.VAR_Y);
 
             input.put((long)(y*width + x), 1);
-        }
-
-        @Override
-        public void saveMemoryState(String filePrefix) {
-
-        }
-
-        @Override
-        public void loadMemoryState(String filePrefix) {
-
         }
     }
 }

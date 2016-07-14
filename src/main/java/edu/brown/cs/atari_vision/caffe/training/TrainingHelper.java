@@ -1,6 +1,7 @@
 package edu.brown.cs.atari_vision.caffe.training;
 
 import burlap.behavior.policy.Policy;
+import burlap.behavior.policy.PolicyUtils;
 import burlap.behavior.policy.RandomPolicy;
 import burlap.behavior.singleagent.Episode;
 import burlap.mdp.core.action.Action;
@@ -32,8 +33,8 @@ public abstract class TrainingHelper {
 
     ActionSet actionSet;
 
-    int maxEpisodeFrames = -1;
-    int totalTrainingFrames = 10000000;
+    int maxEpisodeSteps = -1;
+    int totalTrainingSteps = 10000000;
 
     int testInterval = 100000;
     int numTestEpisodes = 10;
@@ -41,11 +42,7 @@ public abstract class TrainingHelper {
     String snapshotPrefix;
     int snapshotInterval = -1;
 
-
-    List<State> sampleStates;
-    int numSampleStates = -1;
-
-    int frameCounter;
+    int stepCounter;
     int episodeCounter;
 
 
@@ -56,19 +53,15 @@ public abstract class TrainingHelper {
         this.env = env;
         this.actionSet = actionSet;
 
-        this.frameCounter = 0;
+        this.stepCounter = 0;
         this.episodeCounter = 0;
     }
 
     public abstract void prepareForTraining();
     public abstract void prepareForTesting();
 
-    public void setNumSampleStates(int n) {
-        numSampleStates = n;
-    }
-
-    public void setTotalTrainingFrames(int n) {
-        totalTrainingFrames = n;
+    public void setTotalTrainingSteps(int n) {
+        totalTrainingSteps = n;
     }
 
     public void setNumTestEpisodes(int n) {
@@ -79,8 +72,8 @@ public abstract class TrainingHelper {
         testInterval = i;
     }
 
-    public void setMaxEpisodeFrames(int f) {
-        maxEpisodeFrames = f;
+    public void setMaxEpisodeSteps(int f) {
+        maxEpisodeSteps = f;
     }
 
     public void enableSnapshots(String snapshotPrefix, int snapshotInterval) {
@@ -89,41 +82,18 @@ public abstract class TrainingHelper {
     }
 
     public void run() {
-        if (numSampleStates > 0) {
-            System.out.println("Sampling random states");
-            prepareForTesting();
-
-            // Take a random sample of states
-            Policy randomPolicy = new RandomPolicy(actionSet.actionTypeList());
-            sampleStates = new ArrayList<>(numSampleStates);
-
-            while (sampleStates.size() < numSampleStates) {
-                // Run a random episode
-                Episode ea = runEpisode(randomPolicy);
-                int episodeSize = ea.numTimeSteps();
-
-                // Random sample of unique states from the episode
-                Random rng = new Random();
-                int numStatesToAdd = Math.min(episodeSize, numSampleStates - sampleStates.size());
-                for (int i = 0; i < numStatesToAdd; i++) {
-                    sampleStates.add(ea.state(rng.nextInt(episodeSize)));
-                }
-            }
-
-            querySampleQs();
-        }
 
         int testCountDown = testInterval;
         int snapshotCountDown = snapshotInterval;
 
-        while (frameCounter < totalTrainingFrames) {
-            System.out.println(String.format("Training Episode %d at frame %d", episodeCounter, frameCounter));
+        while (stepCounter < totalTrainingSteps) {
+            System.out.println(String.format("Training Episode %d at step %d", episodeCounter, stepCounter));
 
             prepareForTraining();
             env.resetEnvironment();
 
             long startTime = System.currentTimeMillis();
-            Episode ea = learner.runLearningEpisode(env, Math.min(totalTrainingFrames - frameCounter, maxEpisodeFrames));
+            Episode ea = learner.runLearningEpisode(env, Math.min(totalTrainingSteps - stepCounter, maxEpisodeSteps));
             long endTime = System.currentTimeMillis();
             double timeInterval = (endTime - startTime)/1000.0;
 
@@ -131,10 +101,10 @@ public abstract class TrainingHelper {
             for (double r : ea.rewardSequence) {
                 totalReward += r;
             }
-            System.out.println(String.format("Episode reward: %.2f -- %.1ffps", totalReward, ea.numTimeSteps()/timeInterval));
+            System.out.println(String.format("Episode reward: %.2f -- %.1f steps/sec", totalReward, ea.numTimeSteps()/timeInterval));
             System.out.println();
 
-            frameCounter += ea.numTimeSteps();
+            stepCounter += ea.numTimeSteps();
             episodeCounter++;
             if (snapshotPrefix != null) {
                 snapshotCountDown -= ea.numTimeSteps();
@@ -154,39 +124,23 @@ public abstract class TrainingHelper {
         System.out.println("Done Training!");
     }
 
-    public void querySampleQs() {
-        double totalMaxQ = 0;
-        for (State state : sampleStates) {
-            FloatBlob qVals = vfa.qValuesForState(state);
-            totalMaxQ += vfa.blobMax(qVals, 0);
-        }
-
-        double averageMaxQ = totalMaxQ/numSampleStates;
-        System.out.println(String.format("Average Max Q-Value for sample states: %.3f", averageMaxQ));
-    }
-
     public void runTestSet() {
 
+        // Change any learning variables to test values (i.e. experience memory)
         prepareForTesting();
-
-        // Test the MaxQValues of the sample states
-        if (sampleStates != null) {
-            querySampleQs();
-        }
-
 
         // Run the test policy on test episodes
         System.out.println("Running Test Set...");
         double totalTestReward = 0;
-        for (int e = 1; e <= numTestEpisodes; e++) {
-            Episode ea = runEpisode(testPolicy);
+        for (int n = 1; n <= numTestEpisodes; n++) {
+            Episode e = PolicyUtils.rollout(testPolicy, env, maxEpisodeSteps);
 
             double totalReward = 0;
-            for (double reward : ea.rewardSequence) {
+            for (double reward : e.rewardSequence) {
                 totalReward += reward;
             }
 
-            System.out.println(String.format("%d: Reward = %.2f", e, totalReward));
+            System.out.println(String.format("%d: Reward = %.2f", n, totalReward));
             totalTestReward += totalReward;
         }
 
@@ -194,55 +148,11 @@ public abstract class TrainingHelper {
         System.out.println();
     }
 
-    public Episode runEpisode(Policy policy) {
-        env.resetEnvironment();
-        Episode ea = new Episode();
-
-        int eFrameCounter = 0;
-        while(!env.isInTerminalState() && (eFrameCounter < maxEpisodeFrames || maxEpisodeFrames == -1)){
-            State curState = env.currentObservation();
-            Action action = policy.action(curState);
-
-            EnvironmentOutcome eo = env.executeAction(action);
-            ea.transition(eo.a, eo.op, eo.r);
-
-            eFrameCounter++;
-        }
-
-        return ea;
-    }
-
     public void saveLearningState(String filePrefix) {
-
-        String trainerDataFilename = filePrefix + "_trainer.data";
-        HashMap<String, Object> trainerData = new HashMap<>();
-        trainerData.put("frameCounter", frameCounter);
-        trainerData.put("episodeCounter", episodeCounter);
-        try (ObjectOutputStream objOut = new ObjectOutputStream(new FileOutputStream(trainerDataFilename))) {
-            objOut.writeObject(trainerData);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-        vfa.saveLearningState(filePrefix);
+        learner.saveLearningState(filePrefix);
     }
 
-    public void loadLearningState(String filePrefix, String solverStateFile) {
-
-        String trainerDataFilename = filePrefix + "_trainer.data";
-        try (ObjectInputStream objIn = new ObjectInputStream(new FileInputStream(trainerDataFilename))) {
-            HashMap<String, Object> trainerData = (HashMap<String, Object>) objIn.readObject();
-
-            this.frameCounter = (Integer)trainerData.get("frameCounter");
-            this.episodeCounter = (Integer)trainerData.get("episodeCounter");
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
-        vfa.loadLearningState(filePrefix, solverStateFile);
-
-        learner.restartFrom(this.frameCounter);
+    public void loadLearningState(String filePrefix) {
+        learner.loadLearningState(filePrefix);
     }
 }

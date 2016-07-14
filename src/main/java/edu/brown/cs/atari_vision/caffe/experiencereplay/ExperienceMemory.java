@@ -11,4 +11,7 @@ public interface ExperienceMemory {
 	void addExperience(EnvironmentOutcome eo);
 	List<EnvironmentOutcome> sampleExperiences(int n);
 	void resetMemory();
+
+	void saveMemory(String filePrefix);
+	void loadMemory(String filePrefix);
 }

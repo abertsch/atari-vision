@@ -58,7 +58,7 @@ public class RunTest {
         // setup helper
         TrainingHelper helper = new SimpleTrainer(null, dqn, testPolicy, actionSet, env);
         helper.setNumTestEpisodes(50);
-        helper.setMaxEpisodeFrames(200000);
+        helper.setMaxEpisodeSteps(200000);
 
         // run helper
         helper.runTestSet();

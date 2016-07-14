@@ -10,6 +10,7 @@ import edu.brown.cs.atari_vision.caffe.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameExperienceMemory;
 import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.Frame;
+import edu.brown.cs.atari_vision.caffe.policies.AnnealedEpsilonGreedy;
 import edu.brown.cs.atari_vision.caffe.preprocess.DQNPreProcessor;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
 import org.bytedeco.javacpp.Loader;
@@ -75,8 +76,7 @@ public class DQNTrainer extends TrainingHelper {
         FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(10000, maxHistoryLength, new DQNPreProcessor(), actionSet);
 
         DQN dqn = new DQN(SOLVER_FILE, actionSet, trainingExperienceMemory, gamma);
-//        Policy policy = new AnnealedEpsilonGreedy(dqn, epsilonStart, epsilonEnd, epsilonAnnealDuration);
-        Policy policy = new EpsilonGreedy(dqn, epsilonEnd);
+        Policy policy = new AnnealedEpsilonGreedy(dqn, epsilonStart, epsilonEnd, epsilonAnnealDuration);
 
         DeepQLearner deepQLearner = new DeepQLearner(domain, gamma, 50000, policy, dqn);
         deepQLearner.setExperienceReplay(trainingExperienceMemory, dqn.batchSize);
@@ -85,14 +85,14 @@ public class DQNTrainer extends TrainingHelper {
 
         // setup helper
         TrainingHelper helper = new DQNTrainer(deepQLearner, dqn, testPolicy, actionSet, env, trainingExperienceMemory, testExperienceMemory);
-        helper.setTotalTrainingFrames(50000000);
+        helper.setTotalTrainingSteps(50000000);
         helper.setTestInterval(100000);
         helper.setNumTestEpisodes(10);
-        helper.setMaxEpisodeFrames(20000);
-        helper.setNumSampleStates(1000);
+        helper.setMaxEpisodeSteps(20000);
         helper.enableSnapshots("networks/dqn/pong", 1000000);
 
-        helper.loadLearningState("networks/dqn/pong", "_iter_14977050.solverstate");
+        // load learning state if resuming
+//        helper.loadLearningState("networks/dqn/pong");
 
         // run helper
         helper.run();

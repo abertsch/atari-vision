@@ -18,6 +18,7 @@ import edu.brown.cs.atari_vision.caffe.experiencereplay.ExperienceMemory;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author James MacGlashan.
@@ -81,6 +82,7 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 	 * The total number of learners steps that have taken place
 	 */
 	protected int totalSteps = 0;
+	protected int totalEpisodes = 0;
 
 
 	public ApproximateQLearning(SADomain domain, double gamma, ParametricFunction.ParametricStateActionFunction vfa) {
@@ -161,6 +163,7 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 
 		}
 
+		this.totalEpisodes++;
 		return ea;
 	}
 
@@ -169,6 +172,7 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 		this.vfa.resetParameters();
 		this.memory.resetMemory();
 		this.totalSteps = 0;
+		this.totalEpisodes = 0;
 	}
 
 	@Override
@@ -232,10 +236,13 @@ public abstract class ApproximateQLearning extends MDPSolver implements Learning
 		this.stepsSinceStale = 0;
 	}
 
-	public abstract void updateQFunction(List<EnvironmentOutcome> samples);
-
-	public void restartFrom(int stepNumber) {
+	public void resumeFrom(int stepNumber, int episodeNumber) {
 		totalSteps = stepNumber;
+		totalEpisodes = episodeNumber;
 		updateStaleFunction();
 	}
+
+	public abstract void updateQFunction(List<EnvironmentOutcome> samples);
+	public abstract void saveLearningState(String filePrefix);
+	public abstract void loadLearningState(String filePrefix);
 }

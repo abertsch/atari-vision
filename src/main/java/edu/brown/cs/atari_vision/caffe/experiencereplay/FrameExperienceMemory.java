@@ -58,7 +58,7 @@ public class FrameExperienceMemory implements ExperienceMemory, NNStateConverter
     }
 
     @Override
-    public void getStateInput(State state, FloatPointer input) {
+    public void convertState(State state, FloatPointer input) {
         Frame frame = (Frame) state;
 
         long frameSize = preProcessor.outputSize();
@@ -85,69 +85,6 @@ public class FrameExperienceMemory implements ExperienceMemory, NNStateConverter
                 input.position(pos + (maxHistoryLength - historyLength)*frameSize),
                 historyLength);
         input.position(pos);
-    }
-
-    @Override
-    public void saveMemoryState(String filePrefix) {
-
-        String frameHistoryFilename = filePrefix + ".framehist";
-        String frameExperienceFilename = filePrefix + ".ser";
-
-        try (ObjectOutputStream objOut = new ObjectOutputStream(new FileOutputStream(frameExperienceFilename));
-             FileOutputStream historyOut = new FileOutputStream(frameHistoryFilename)) {
-
-            objOut.writeObject(this);
-
-            // write frame history
-            long pos = 0;
-            byte[] buffer = new byte[10000000];
-            this.frameHistory.get(buffer);
-            int numRead;
-            while (pos < frameHistory.limit()) {
-                numRead = (int)Math.min(buffer.length, frameHistory.limit() - pos);
-                frameHistory.position(pos).get(buffer);
-                pos += numRead;
-
-                historyOut.write(buffer, 0, numRead);
-            }
-
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void loadMemoryState(String filePrefix) {
-        String frameHistoryFilename = filePrefix + ".framehist";
-        String frameExperienceFilename = filePrefix + ".ser";
-
-        try (ObjectInputStream objIn = new ObjectInputStream(new FileInputStream(frameExperienceFilename));
-             FileInputStream historyIn = new FileInputStream(frameHistoryFilename)) {
-
-            // load object
-            FrameExperienceMemory experienceMemory = (FrameExperienceMemory) objIn.readObject();
-            this.currentFrame = experienceMemory.currentFrame;
-            this.next = experienceMemory.next;
-            this.size = experienceMemory.size;
-            this.experiences = experienceMemory.experiences;
-
-
-            // load frame history
-            long pos = 0;
-            byte[] buffer = new byte[10000000];
-            int numRead;
-            while ((numRead = historyIn.read(buffer)) != -1) {
-                this.frameHistory.position(pos).put(buffer, 0, numRead);
-                pos += numRead;
-            }
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
     }
 
     @Override
@@ -184,7 +121,7 @@ public class FrameExperienceMemory implements ExperienceMemory, NNStateConverter
         Frame newFrame = new Frame(newIndex, newHistoryLength);
 
         // Add experience
-        experiences[next] = new FrameExperience(currentFrame, actionSet.map(eo.a.actionName()), newFrame, eo.r, eo.terminated);
+        experiences[next] = new FrameExperience(currentFrame, actionSet.map(eo.a), newFrame, eo.r, eo.terminated);
         next = (next+1) % experiences.length;
         size = Math.min(size+1, experiences.length);
 
@@ -251,5 +188,70 @@ public class FrameExperienceMemory implements ExperienceMemory, NNStateConverter
         this.size = 0;
         this.next = 0;
         this.currentFrame = new Frame(0, 0);
+    }
+
+    @Override
+    public void saveMemory(String filePrefix) {
+
+        String frameHistoryFilename = filePrefix + ".framehist";
+        String frameExperienceFilename = filePrefix + ".ser";
+
+        try (ObjectOutputStream objOut = new ObjectOutputStream(new FileOutputStream(frameExperienceFilename));
+             FileOutputStream historyOut = new FileOutputStream(frameHistoryFilename)) {
+
+            objOut.writeObject(this);
+
+            // write frame history
+            long pos = 0;
+            byte[] buffer = new byte[10000000];
+            this.frameHistory.get(buffer);
+            int numRead;
+            while (pos < frameHistory.limit()) {
+                numRead = (int)Math.min(buffer.length, frameHistory.limit() - pos);
+                frameHistory.position(pos).get(buffer);
+                pos += numRead;
+
+                historyOut.write(buffer, 0, numRead);
+            }
+
+        } catch (IOException e) {
+            System.out.println("Unable to save experience memory");
+            e.printStackTrace();
+            return;
+        }
+    }
+
+    @Override
+    public void loadMemory(String filePrefix) {
+        String frameHistoryFilename = filePrefix + ".framehist";
+        String frameExperienceFilename = filePrefix + ".ser";
+
+        try (ObjectInputStream objIn = new ObjectInputStream(new FileInputStream(frameExperienceFilename));
+             FileInputStream historyIn = new FileInputStream(frameHistoryFilename)) {
+
+            // load object
+            FrameExperienceMemory experienceMemory = (FrameExperienceMemory) objIn.readObject();
+            this.currentFrame = experienceMemory.currentFrame;
+            this.next = experienceMemory.next;
+            this.size = experienceMemory.size;
+            this.experiences = experienceMemory.experiences;
+
+
+            // load frame history
+            long pos = 0;
+            byte[] buffer = new byte[10000000];
+            int numRead;
+            while ((numRead = historyIn.read(buffer)) != -1) {
+                this.frameHistory.position(pos).put(buffer, 0, numRead);
+                pos += numRead;
+            }
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 }
