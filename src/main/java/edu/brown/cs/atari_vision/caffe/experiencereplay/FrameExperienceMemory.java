@@ -23,7 +23,7 @@ import java.util.Random;
  */
 public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor, StateMapping, Serializable {
 
-    public transient BytePointer frameHistory;
+    public transient BytePointer frameMemory;
     public transient PreProcessor preProcessor;
     public transient ActionSet actionSet;
 
@@ -57,7 +57,7 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
 
         // Create the frame history data size to be totalHistorySize + a padding on both sides of n - 1
         long paddingSize = (this.maxHistoryLength - 1) * outputSize;
-        frameHistory = (new BytePointer(size * outputSize + 2 * paddingSize)).zero();
+        frameMemory = (new BytePointer(size * outputSize + 2 * paddingSize)).zero();
     }
 
     @Override
@@ -84,7 +84,7 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
 
         // Convert compressed frameHistory data to CNN input
         preProcessor.convertDataToInput(
-                this.frameHistory.position(index - (historyLength - 1)*frameSize),
+                this.frameMemory.position(index - (historyLength - 1)*frameSize),
                 input.position(pos + (maxHistoryLength - historyLength)*frameSize),
                 historyLength);
         input.position(pos);
@@ -110,16 +110,16 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
 
     protected FrameHistory addFrame(Mat screenMat) {
         long outputSize = preProcessor.outputSize();
-        long frameHistoryDataSize = frameHistory.capacity();
+        long frameHistoryDataSize = frameMemory.capacity();
         long paddingSize = (maxHistoryLength - 1) * outputSize;
 
         // Find new index
         long newIndex = currentFrameHistory.index + outputSize;
         if (newIndex >= frameHistoryDataSize) {
             // Copy the buffer to the start of the history
-            BytePointer frameHistoryCopy = new BytePointer(frameHistory);
-            frameHistory.position(0).limit(paddingSize).put(frameHistoryCopy.position(frameHistoryDataSize - paddingSize));
-            frameHistory.limit(frameHistory.capacity());
+            BytePointer frameHistoryCopy = new BytePointer(frameMemory);
+            frameMemory.position(0).limit(paddingSize).put(frameHistoryCopy.position(frameHistoryDataSize - paddingSize));
+            frameMemory.limit(frameMemory.capacity());
 
             newIndex = paddingSize;
         }
@@ -128,11 +128,8 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
         int newHistoryLength = currentFrameHistory.historyLength >= maxHistoryLength ?
                 maxHistoryLength : currentFrameHistory.historyLength + 1;
 
-        // Process the new screen
-        BytePointer newData = preProcessor.convertScreenToData(screenMat);
-
-        // Place data in history
-        frameHistory.position(newIndex).put(newData.limit(outputSize));
+        // Process the new screen and place it in the memory
+        preProcessor.convertScreenToData(screenMat, frameMemory.position(newIndex));
 
         // Create new frame
         return new FrameHistory(newIndex, newHistoryLength);
@@ -214,11 +211,11 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
             // write frame history
             long pos = 0;
             byte[] buffer = new byte[10000000];
-            this.frameHistory.get(buffer);
+            this.frameMemory.get(buffer);
             int numRead;
-            while (pos < frameHistory.limit()) {
-                numRead = (int)Math.min(buffer.length, frameHistory.limit() - pos);
-                frameHistory.position(pos).get(buffer);
+            while (pos < frameMemory.limit()) {
+                numRead = (int)Math.min(buffer.length, frameMemory.limit() - pos);
+                frameMemory.position(pos).get(buffer);
                 pos += numRead;
 
                 historyOut.write(buffer, 0, numRead);
@@ -252,7 +249,7 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
             byte[] buffer = new byte[10000000];
             int numRead;
             while ((numRead = historyIn.read(buffer)) != -1) {
-                this.frameHistory.position(pos).put(buffer, 0, numRead);
+                this.frameMemory.position(pos).put(buffer, 0, numRead);
                 pos += numRead;
             }
 

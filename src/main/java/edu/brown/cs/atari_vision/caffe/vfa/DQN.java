@@ -7,7 +7,6 @@ import burlap.mdp.core.action.Action;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
 import edu.brown.cs.atari_vision.caffe.action.ActionSet;
-import edu.brown.cs.atari_vision.caffe.visualizers.PongVisualizer;
 import org.bytedeco.javacpp.FloatPointer;
 
 import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
@@ -277,7 +276,6 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
         caffeSolver.Restore(filePrefix + ".solverstate");
     }
 
-    // Loading
     public void loadWeightsFrom(String fileName) {
         caffeNet.CopyTrainedLayersFrom(fileName);
     }

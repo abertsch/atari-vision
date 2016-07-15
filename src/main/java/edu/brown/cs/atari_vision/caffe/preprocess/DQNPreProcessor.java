@@ -18,15 +18,13 @@ public class DQNPreProcessor implements PreProcessor {
     }
 
     @Override
-    public BytePointer convertScreenToData(Mat screen) {
+    public void convertScreenToData(Mat screen, BytePointer data) {
 
-        Mat gray = new Mat();
+        Mat gray = new Mat(screen.rows(), screen.cols(), CV_8UC1);
         cvtColor(screen, gray, COLOR_BGR2GRAY);
 
-        Mat downsample = new Mat();
+        Mat downsample = new Mat(scaleHeight, scaleWidth, CV_8UC1, data);
         resize(gray, downsample, new Size(scaleWidth, scaleHeight));
-
-        return downsample.data();
     }
 
     @Override

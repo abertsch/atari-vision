@@ -10,7 +10,7 @@ import static org.bytedeco.javacpp.opencv_core.*;
  * Created by MelRod on 5/27/16.
  */
 public interface PreProcessor {
-    BytePointer convertScreenToData(Mat screen);
+    void convertScreenToData(Mat screen, BytePointer data);
     void convertDataToInput(BytePointer data, FloatPointer input, long size);
     int outputSize();
 }

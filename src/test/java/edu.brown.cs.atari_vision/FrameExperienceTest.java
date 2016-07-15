@@ -186,8 +186,12 @@ public class FrameExperienceTest {
         }
 
         @Override
-        public BytePointer convertScreenToData(Mat screen) {
-            return screen.data();
+        public void convertScreenToData(Mat screen, BytePointer data) {
+            if (screen.data().address() == data.address()) {
+                return;
+            }
+
+            data.put(screen.data());
         }
 
         @Override
