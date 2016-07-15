@@ -14,7 +14,7 @@ public interface StateVectorizor {
      * Converts a given state to a float vector
      *
      * @param state The state to convert.
-     * @param input The float vector into which to put the state vecotr.
+     * @param input The float vector into which to put the state vector.
      */
     void vectorizeState(State state, FloatPointer input);
 }

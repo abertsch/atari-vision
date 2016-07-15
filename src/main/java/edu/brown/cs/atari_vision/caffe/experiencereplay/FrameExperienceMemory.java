@@ -102,7 +102,6 @@ public class FrameExperienceMemory implements ExperienceMemory, StateVectorizor,
         FrameHistory op = addFrame(((ALEState)eo.op).getScreen());
         currentFrameHistory = op;
 
-
         experiences[next] = new FrameExperience(o, actionSet.map(eo.a), op, eo.r, eo.terminated);
         next = (next+1) % experiences.length;
         size = Math.min(size+1, experiences.length);

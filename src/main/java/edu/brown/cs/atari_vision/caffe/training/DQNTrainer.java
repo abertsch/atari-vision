@@ -8,7 +8,7 @@ import edu.brown.cs.atari_vision.caffe.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameExperienceMemory;
 import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
 import edu.brown.cs.atari_vision.caffe.policies.AnnealedEpsilonGreedy;
-import edu.brown.cs.atari_vision.caffe.preprocess.DQNPreProcessor;
+import edu.brown.cs.atari_vision.caffe.preprocess.ALEPreProcessor;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
 import edu.brown.cs.burlap.ALEDomainGenerator;
 import edu.brown.cs.burlap.ALEEnvironment;
@@ -74,13 +74,14 @@ public class DQNTrainer extends TrainingHelper {
 
         ActionSet actionSet = new ActionSet(domain);
 
-        FrameExperienceMemory trainingExperienceMemory = new FrameExperienceMemory(experienceMemoryLength, maxHistoryLength, new DQNPreProcessor(), actionSet);
+        FrameExperienceMemory trainingExperienceMemory =
+                new FrameExperienceMemory(experienceMemoryLength, maxHistoryLength, new ALEPreProcessor(), actionSet);
         ALEEnvironment env = new ALEEnvironment(alePath, ROM, frameSkip);
         ALEVisualExplorer exp = new ALEVisualExplorer(domain, env, ALEVisualizer.create());
         exp.initGUI();
         exp.startLiveStatePolling(1000/60);
 
-        FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(10000, maxHistoryLength, new DQNPreProcessor(), actionSet);
+        FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(10000, maxHistoryLength, new ALEPreProcessor(), actionSet);
 
         DQN dqn = new DQN(SOLVER_FILE, actionSet, trainingExperienceMemory, gamma);
         Policy policy = new AnnealedEpsilonGreedy(dqn, epsilonStart, epsilonEnd, epsilonAnnealDuration);
@@ -91,7 +92,8 @@ public class DQNTrainer extends TrainingHelper {
         Policy testPolicy = new EpsilonGreedy(dqn, 0.05);
 
         // setup helper
-        TrainingHelper helper = new DQNTrainer(deepQLearner, dqn, testPolicy, actionSet, env, trainingExperienceMemory, testExperienceMemory);
+        TrainingHelper helper =
+                new DQNTrainer(deepQLearner, dqn, testPolicy, actionSet, env, trainingExperienceMemory, testExperienceMemory);
         helper.setTotalTrainingSteps(50000000);
         helper.setTestInterval(100000);
         helper.setNumTestEpisodes(10);

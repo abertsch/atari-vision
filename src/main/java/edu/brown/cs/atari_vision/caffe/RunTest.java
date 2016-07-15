@@ -5,10 +5,7 @@ import burlap.behavior.policy.Policy;
 import burlap.mdp.singleagent.SADomain;
 import edu.brown.cs.atari_vision.caffe.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameExperienceMemory;
-import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
-import edu.brown.cs.atari_vision.caffe.policies.AnnealedEpsilonGreedy;
-import edu.brown.cs.atari_vision.caffe.preprocess.DQNPreProcessor;
-import edu.brown.cs.atari_vision.caffe.training.DQNTrainer;
+import edu.brown.cs.atari_vision.caffe.preprocess.ALEPreProcessor;
 import edu.brown.cs.atari_vision.caffe.training.SimpleTrainer;
 import edu.brown.cs.atari_vision.caffe.training.TrainingHelper;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
@@ -45,7 +42,7 @@ public class RunTest {
         ALEDomainGenerator domGen = new ALEDomainGenerator(actionNames);
         SADomain domain = domGen.generateDomain();
 
-        FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(maxHistoryLength, maxHistoryLength, new DQNPreProcessor(), actionSet);
+        FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(maxHistoryLength, maxHistoryLength, new ALEPreProcessor(), actionSet);
         ALEEnvironment env = new ALEEnvironment(alePath, ROM, frameSkip);
 
         DQN dqn = new DQN(SOLVER_FILE, actionSet, testExperienceMemory, gamma);

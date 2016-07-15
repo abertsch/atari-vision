@@ -8,14 +8,12 @@ import static org.bytedeco.javacpp.opencv_imgproc.*;
 /**
  * Created by MelRod on 5/25/16.
  */
-public class DQNPreProcessor implements PreProcessor {
+public class ALEPreProcessor implements PreProcessor {
 
     static final int scaleWidth = 84;
     static final int scaleHeight = 84;
 
-    public DQNPreProcessor() {
-
-    }
+    public ALEPreProcessor() {}
 
     @Override
     public void convertScreenToData(Mat screen, BytePointer data) {
