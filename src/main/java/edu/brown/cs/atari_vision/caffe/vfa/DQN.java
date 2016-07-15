@@ -37,6 +37,9 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
 
     static JFrame pongVisualizer = PongVisualizer.createPongVisualizer();
 
+    /** If rewards are greater than this or less than the negative, they will be clipped */
+    static final int REWARD_CLIP = 1;
+
     /** The GPU device to use */
     public int gpuDevice = 0;
 
@@ -169,11 +172,19 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
             EnvironmentOutcome eo = samples.get(i);
             float maxQ = blobMax(staleVfa.qValuesBlob, i);
 
+            // clip reward
+            double r = eo.r;
+            if (r > REWARD_CLIP) {
+                r = REWARD_CLIP;
+            } else if (r < -REWARD_CLIP) {
+                r = -REWARD_CLIP;
+            }
+
             float y;
             if (eo.terminated) {
-                y = (float)eo.r;
+                y = (float)r;
             } else {
-                y = (float)(eo.r + gamma*maxQ);
+                y = (float)(r + gamma*maxQ);
             }
 
             int index = i*numActions + actionSet.map(eo.a.actionName());
