@@ -70,6 +70,7 @@ public class ALEDriver {
                 ALE_FILE,
                 "-game_controller", "fifo",
                 "-frame_skip", Integer.toString(frameskip),
+                "-repeat_action_probability", "0",
                 (new File(ROM_DIR, rom)).getPath())
                 .redirectError(new File(ALE_ERROR_FILE));
 
@@ -246,7 +247,7 @@ public class ALEDriver {
     public void sendAction(int act) {
         // Send player A's action, as well as the NOOP for player B
         // Format: <player_a_action>,<player_b_action>\n
-        out.printf("%d,%d\n", act, 18);
+        out.printf("%d,%d\n", act, playerBAction);
         out.flush();
     }
 
@@ -261,9 +262,6 @@ public class ALEDriver {
 
         // Parse the terminal bit
         rlData.isTerminal = (Integer.parseInt(tokens[0]) == 1);
-        if (rlData.isTerminal) {
-            System.out.println("Hit Terminal!");
-        }
         rlData.reward = Integer.parseInt(tokens[1]);
     }
 

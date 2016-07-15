@@ -25,7 +25,7 @@ import static org.bytedeco.javacpp.caffe.*;
 public class DQNTrainer extends TrainingHelper {
 
     static final String SOLVER_FILE = "dqn_solver.prototxt";
-    static final String ROM = "pong.bin";
+    static final String ROM = "breakout.bin";
     static final boolean GUI = true;
 
     static final int experienceMemoryLength = 1000000;
@@ -70,7 +70,7 @@ public class DQNTrainer extends TrainingHelper {
 
         Loader.load(Caffe.class);
 
-        ActionSet actionSet = Actions.pongActionSet();
+        ActionSet actionSet = Actions.breakoutActionSet();
 
         ALEDomainGenerator domGen = new ALEDomainGenerator(actionSet);
         SADomain domain = domGen.generateDomain();
@@ -81,8 +81,8 @@ public class DQNTrainer extends TrainingHelper {
         FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(10000, maxHistoryLength, new DQNPreProcessor(), actionSet);
 
         DQN dqn = new DQN(SOLVER_FILE, actionSet, trainingExperienceMemory, gamma);
-//        Policy policy = new AnnealedEpsilonGreedy(dqn, epsilonStart, epsilonEnd, epsilonAnnealDuration);
-        Policy policy = new EpsilonGreedy(dqn, epsilonEnd);
+        Policy policy = new AnnealedEpsilonGreedy(dqn, epsilonStart, epsilonEnd, epsilonAnnealDuration);
+//        Policy policy = new EpsilonGreedy(dqn, epsilonEnd);
 
         DeepQLearner deepQLearner = new DeepQLearner(domain, gamma, 50000, policy, dqn);
         deepQLearner.setExperienceReplay(trainingExperienceMemory, dqn.batchSize);
@@ -96,9 +96,9 @@ public class DQNTrainer extends TrainingHelper {
         helper.setNumTestEpisodes(10);
         helper.setMaxEpisodeFrames(20000);
         helper.setNumSampleStates(1000);
-        helper.enableSnapshots("networks/dqn/pong", 1000000);
+        helper.enableSnapshots("networks/dqn/breakout", 1000000);
 
-        helper.loadLearningState("networks/dqn/pong", "_iter_14977050.solverstate");
+//        helper.loadLearningState("networks/dqn/breakout", "_iter_6928650.solverstate");
 
         // run helper
         helper.run();

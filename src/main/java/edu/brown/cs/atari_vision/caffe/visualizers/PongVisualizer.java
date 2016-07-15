@@ -19,13 +19,13 @@ public class PongVisualizer extends JPanel {
 
     public static List<QValue> qValues;
 
-    public static final int NUM_ACTIONS = 3;
+    public static final int NUM_ACTIONS = 4;
     public static final float MAX_Q_VALUE = 1;
 
     public static final int DEFAULT_HEIGHT = 300;
     public static final int DEFAULT_BAR_WIDTH = 300;
 
-    public static final Color[] COLORS = new Color[]{Color.CYAN, Color.MAGENTA, Color.PINK};
+    public static final Color[] COLORS = new Color[]{Color.CYAN, Color.GREEN, Color.MAGENTA, Color.PINK};
 
     public PongVisualizer() {
 
@@ -63,22 +63,22 @@ public class PongVisualizer extends JPanel {
 
         g.setFont(new Font("Arial", Font.PLAIN, 20));
 
-        double norm = 1;
-//        double norm = 1e-10;
-//        double absMax = 0;
-//        for (int a = 0; a < NUM_ACTIONS; a++) {
-//            double absQ = Math.abs(qValues.get(a).q);
-//
-//            if (absQ > absMax) {
-//                absMax = absQ;
-//            }
-//        }
-//        while (norm < 1e10) {
-//            if (norm > absMax) {
-//                break;
-//            }
-//            norm *= 10;
-//        }
+//        double norm = 1;
+        double norm = 1e-10;
+        double absMax = 0;
+        for (int a = 0; a < NUM_ACTIONS; a++) {
+            double absQ = Math.abs(qValues.get(a).q);
+
+            if (absQ > absMax) {
+                absMax = absQ;
+            }
+        }
+        while (norm < 1e10) {
+            if (norm > absMax) {
+                break;
+            }
+            norm *= 10;
+        }
 
         for (int a = 0; a < NUM_ACTIONS; a++) {
             double q = qValues.get(a).q;

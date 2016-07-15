@@ -107,6 +107,11 @@
         </dependency>
         <dependency>
             <groupId>org.bytedeco.javacpp-presets</groupId>
+            <artifactId>cuda</artifactId>
+            <version>7.5-1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.bytedeco.javacpp-presets</groupId>
             <artifactId>caffe</artifactId>
             <version>rc3-1.2</version>
         </dependency>

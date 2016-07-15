@@ -113,6 +113,10 @@ public class Actions {
     public static ActionSet pongActionSet() {
         return new ActionSet(new String[]{"player_a_noop", "player_a_right", "player_a_left"});
     }
+    // Pong Action Set
+    public static ActionSet breakoutActionSet() {
+        return new ActionSet(new String[]{"player_a_noop", "player_a_fire", "player_a_right", "player_a_left"});
+    }
     // Space Invaders Action Set
     public static ActionSet siActionSet() {
         return new ActionSet(new String[]{
