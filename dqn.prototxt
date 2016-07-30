@@ -172,10 +172,78 @@ layer {
     operation: PROD
   }
 }
+
+
+# LOSS FUNCTION
 layer {
-  name: "loss"
-  type: "EuclideanLoss"
-  bottom: "filtered_q_values"
+  name: "neg_target"
   bottom: "target"
-  top: "loss"
+  top: "neg_target"
+  type: "Power"
+  power_param {
+    scale: -1
+  }
 }
+layer {
+  name: "delta"
+  type: "Eltwise"
+  bottom: "filtered_q_values"
+  bottom: "neg_target"
+  top: "delta"
+  eltwise_param {
+    operation: SUM
+  }
+}
+layer {
+  name: "abs_delta"
+  bottom: "delta"
+  top: "delta"
+  type: "AbsVal"
+}
+layer {
+  name: "delta2"
+  bottom: "delta"
+  top: "delta2"
+  type: "Power"
+  power_param {
+    power: 2
+  }
+}
+layer {
+  name: "neg_abs_delta"
+  bottom: "delta"
+  top: "delta"
+  type: "Power"
+  power_param {
+    scale: -1
+  }
+}
+layer {
+  name: "neg_delta2"
+  bottom: "delta2"
+  top: "delta2"
+  type: "Power"
+  power_param {
+    scale: -1
+  }
+}
+layer {
+  name: "neg_min_loss"
+  type: "Eltwise"
+  bottom: "delta2"
+  bottom: "delta"
+  top: "loss"
+  eltwise_param {
+    operation: MAX
+  }
+}
+layer {
+  name: "abs_loss"
+  bottom: "loss"
+  top: "loss"
+  type: "AbsVal"
+  loss_weight: 1
+}
+
+
+
