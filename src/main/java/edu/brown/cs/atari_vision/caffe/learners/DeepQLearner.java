@@ -15,6 +15,7 @@ public class DeepQLearner extends ApproximateQLearning {
 
     public int replayStartSize;
     public boolean runningRandomPolicy;
+    public int updateFreq = 4;
 
     public Policy trainingPolicy;
 
@@ -53,7 +54,9 @@ public class DeepQLearner extends ApproximateQLearning {
             return;
         }
 
-        ((DQN)vfa).updateQFunction(samples, (DQN)staleVfa);
+        if (totalSteps % updateFreq == 0) {
+            ((DQN)vfa).updateQFunction(samples, (DQN)staleVfa);
+        }
     }
 
     @Override

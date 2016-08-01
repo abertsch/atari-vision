@@ -1,7 +1,9 @@
 net: "dqn.prototxt"
 
 solver_type: RMSPROP
-base_lr: 0.00025
+
+# 0.00025 * BATCH_SIZE = 0.00025 * 32
+base_lr: 0.008
 lr_policy: "fixed"
 momentum: 0.95
 rms_decay: 0.95
@@ -9,4 +11,4 @@ delta: 0.01
 
 display: 50000
 
-solver_mode: CPU
+solver_mode: GPU

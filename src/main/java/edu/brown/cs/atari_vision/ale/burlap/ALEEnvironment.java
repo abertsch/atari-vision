@@ -16,6 +16,8 @@ import org.bytedeco.javacpp.opencv_core.*;
 
 import java.io.IOException;
 
+import static edu.brown.cs.atari_vision.ale.io.ALEDriver.PoolingType.POOLING_TYPE_MAX;
+
 /**
  * @author Melrose Roderick
  */
@@ -162,6 +164,7 @@ public class ALEEnvironment<StateT extends State> implements Environment {
             io.setUpdateScreen(true);
             io.setUpdateRL(true);
             io.setUpdateRam(false);
+            io.setPoolingType(POOLING_TYPE_MAX);
             io.initPipes();
         }
         catch (IOException e) {

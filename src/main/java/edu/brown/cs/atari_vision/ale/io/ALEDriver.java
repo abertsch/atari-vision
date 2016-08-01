@@ -11,7 +11,7 @@ import java.awt.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 
-import static org.bytedeco.javacpp.opencv_core.CV_8UC3;
+import static org.bytedeco.javacpp.opencv_core.*;
 
 /**
  * Created by MelRod on 5/23/16.
@@ -26,6 +26,15 @@ public class ALEDriver {
 
     /** Data structure holding the screen image */
     Mat screen;
+    /** Data structure holding the raw frame data. If pooling != 0, pool over these frames **/
+    Mat frameA;
+    Mat frameB;
+    PoolingType poolingType;
+    public enum PoolingType {
+        POOLING_TYPE_NONE,
+        POOLING_TYPE_MAX,
+        POOLING_TYPE_MEAN
+    }
     /** Data structure holding colors */
     ColorPalette colorPalette = new NTSCPalette();
     /** Data structure holding the RAM data */
@@ -69,8 +78,9 @@ public class ALEDriver {
         ProcessBuilder pb = new ProcessBuilder(
                 ALE_FILE,
                 "-game_controller", "fifo",
-                "-frame_skip", Integer.toString(frameskip),
+                "-frame_skip", "0",
                 "-repeat_action_probability", "0",
+                "-disable_color_averaging", "true",
                 (new File(ROM_DIR, rom)).getPath())
                 .redirectError(new File(ALE_ERROR_FILE));
 
@@ -100,6 +110,10 @@ public class ALEDriver {
         this.updateRLData = updateRL;
     }
 
+    public void setPoolingType(PoolingType poolingType) {
+        this.poolingType = poolingType;
+    }
+
     /** A blocking method that sends initial information to ALE. See the
      *   documentation for protocol details.
      *
@@ -119,6 +133,8 @@ public class ALEDriver {
 
         // Create the data structures used to store received information
         screen = new Mat(height, width, CV_8UC3);
+        frameA = new Mat(height, width, CV_8UC3);
+        frameB = new Mat(height, width, CV_8UC3);
         ram = new ConsoleRAM();
         rlData = new RLData();
 
@@ -128,7 +144,7 @@ public class ALEDriver {
         out.flush();
 
         // Initial observe
-        observe();
+        observe(null);
     }
 
     public int getFrameSkip() {
@@ -162,7 +178,7 @@ public class ALEDriver {
     /** A blocking method which will get the next time step from ALE.
      *
      */
-    public boolean observe() {
+    public boolean observe(Mat outputFrame) {
         // Ensure that observe() is not called twice, as it will otherwise block
         //  as both ALE and the agent wait for data.
         if (hasObserved) {
@@ -209,10 +225,12 @@ public class ALEDriver {
             if (updateScreen) {
                 String screenString = tokens[tokenIndex++];
 
-                if (useRLE)
-                    readScreenRLE(screenString);
-                else
-                    readScreenMatrix(screenString);
+                if (outputFrame != null) {
+                    if (useRLE)
+                        readScreenRLE(screenString, outputFrame);
+                    else
+                        readScreenMatrix(screenString, outputFrame);
+                }
             }
 
             // Finally obtain RL data
@@ -237,10 +255,57 @@ public class ALEDriver {
         else
             hasObserved = false;
 
-        sendAction(act);
+        boolean err = false;
+        if (frameskip <= 1) {
+            // Swap frameA and B
+            Mat frameC = frameA;
+            frameA = frameB;
+            frameB = frameC;
 
-        // Record the new data
-        return observe();
+            sendAction(act);
+            err |= observe(frameA);
+        } else {
+            RLData rlData = new RLData();
+            for (int f = 0; f < frameskip - 2; f++) {
+                err |= actHelper(act, null, rlData);
+            }
+            err |= actHelper(act, frameB, rlData);
+            err |= actHelper(act, frameA, rlData);
+
+            this.rlData = rlData;
+        }
+
+        poolFrames();
+        return err;
+    }
+
+    private boolean actHelper(int act, Mat frame, RLData rlData) {
+        boolean err;
+
+        sendAction(act); hasObserved = false;
+        err = observe(frame);
+        rlData.reward += this.rlData.reward;
+        rlData.isTerminal |= this.rlData.isTerminal;
+
+        return err;
+    }
+
+    protected void poolFrames() {
+        if (frameB == null) {
+            screen = frameA;
+            return;
+        }
+        switch (poolingType) {
+            case POOLING_TYPE_NONE:
+                screen = frameA;
+                break;
+            case POOLING_TYPE_MAX:
+                max(frameA, frameB, screen);
+                break;
+            case POOLING_TYPE_MEAN:
+                addWeighted(frameA, 0.5, frameB, 0.5, 0, screen);
+                break;
+        }
     }
 
     /** Helper function to send out an action to ALE */
@@ -287,17 +352,17 @@ public class ALEDriver {
      *
      * @param line The screen part of the string sent by ALE.
      */
-    public void readScreenMatrix(String line) {
-        BytePointer screenData = screen.data();
+    public void readScreenMatrix(String line, Mat frame) {
+        BytePointer screenData = frame.data();
         int position = 0;
 
-        byte[] buffer = new byte[screen.rows() * screen.cols() * screen.channels()];
+        byte[] buffer = new byte[frame.rows() * frame.cols() * frame.channels()];
 
         int ptr = 0;
 
         // 0.3 protocol - send everything
-        for (int y = 0; y < screen.rows(); y++)
-            for (int x = 0; x < screen.cols(); x++) {
+        for (int y = 0; y < frame.rows(); y++)
+            for (int x = 0; x < frame.cols(); x++) {
                 int v = byteAt(line, ptr);
 
                 Color c = colorPalette.get(v);
@@ -327,12 +392,12 @@ public class ALEDriver {
     }
 
     /** Read in a run-length encoded screen. ALE 0.3-0.4 */
-    public void readScreenRLE(String line) {
+    public void readScreenRLE(String line, Mat frame) {
 
-        BytePointer screenData = screen.data();
+        BytePointer screenData = frame.data();
         int position = 0;
 
-        byte[] buffer = new byte[screen.rows() * screen.cols() * screen.channels()];
+        byte[] buffer = new byte[frame.rows() * frame.cols() * frame.channels()];
 
         int ptr = 0;
 

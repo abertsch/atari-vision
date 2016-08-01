@@ -95,7 +95,6 @@ public class DQNTrainer extends TrainingHelper {
         helper.setTestInterval(100000);
         helper.setNumTestEpisodes(10);
         helper.setMaxEpisodeFrames(20000);
-        helper.setNumSampleStates(1000);
         helper.enableSnapshots("networks/dqn/breakout", 1000000);
 
 //        helper.loadLearningState("networks/dqn/breakout", "_iter_6928650.solverstate");

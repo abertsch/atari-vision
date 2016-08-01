@@ -73,16 +73,16 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
 
 
     public FloatNet caffeNet;
-    protected FloatSolver caffeSolver;
+    public FloatSolver caffeSolver;
 
     protected FloatMemoryDataLayer inputLayer;
     protected FloatMemoryDataLayer filterLayer;
     protected FloatMemoryDataLayer targetLayer;
 
-    protected FloatPointer stateInputs;
-    protected FloatPointer primeStateInputs;
-    protected FloatPointer dummyInputData;
-    protected FloatBlob qValuesBlob;
+    public FloatPointer stateInputs;
+    public FloatPointer primeStateInputs;
+    public FloatPointer dummyInputData;
+    public FloatBlob qValuesBlob;
 
     public DQN(String caffeSolverFile, ActionSet actionSet, NNStateConverter stateConverter, double gamma) {
         this.solverFile = caffeSolverFile;
@@ -163,6 +163,9 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
         // Forward pass states
         staleVfa.inputDataIntoLayers(primeStateInputs.position(0), dummyInputData, dummyInputData);
         staleVfa.caffeNet.ForwardPrefilled();
+        // For getting the values for clipping
+        inputDataIntoLayers(stateInputs.position(0), dummyInputData, dummyInputData);
+        caffeNet.ForwardPrefilled();
 
         // Calculate target values
         int numActions = actionSet.size();
@@ -187,7 +190,16 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
                 y = (float)(r + gamma*maxQ);
             }
 
-            int index = i*numActions + actionSet.map(eo.a.actionName());
+            int a = actionSet.map(eo.a.actionName());
+            int index = i*numActions + a;
+
+            float q = qValuesBlob.data_at(i, a, 0, 0);
+            float delta_clip = 1;
+            if (y - q > delta_clip) {
+                y = q + delta_clip;
+            } else if (q - y < -delta_clip) {
+                y = q - delta_clip;
+            }
             ys.put(index, y);
             actionFilter.put(index, 1);
         }
@@ -264,7 +276,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
         return max;
     }
 
-    protected void inputDataIntoLayers(FloatPointer inputData, FloatPointer filterData, FloatPointer yData) {
+    public void inputDataIntoLayers(FloatPointer inputData, FloatPointer filterData, FloatPointer yData) {
         inputLayer.Reset(inputData, dummyInputData, batchSize);
         filterLayer.Reset(filterData, dummyInputData, batchSize);
         targetLayer.Reset(yData, dummyInputData, batchSize);
