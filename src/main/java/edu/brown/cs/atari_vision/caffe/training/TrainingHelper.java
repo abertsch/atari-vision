@@ -14,8 +14,10 @@ import edu.brown.cs.atari_vision.caffe.vfa.DQN;
 import static org.bytedeco.javacpp.caffe.*;
 
 import java.io.*;
+import java.nio.DoubleBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,6 +52,10 @@ public abstract class TrainingHelper {
     int frameCounter;
     int episodeCounter;
 
+    double highestAverageReward = Double.NEGATIVE_INFINITY;
+
+    PrintStream out;
+
 
     public TrainingHelper(DeepQLearner learner, DQN vfa, Policy testPolicy, ActionSet actionSet, Environment env) {
         this.learner = learner;
@@ -60,6 +66,15 @@ public abstract class TrainingHelper {
 
         this.frameCounter = 0;
         this.episodeCounter = 0;
+
+
+        try {
+            String fileName = "testResults";
+            out = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return;
+        }
     }
 
     public abstract void prepareForTraining();
@@ -148,7 +163,7 @@ public abstract class TrainingHelper {
 
             testCountDown -= ea.numTimeSteps();
             if (testCountDown <= 0) {
-                runTestSet();
+                runTestSet(frameCounter);
                 testCountDown += testInterval;
             }
         }
@@ -167,7 +182,7 @@ public abstract class TrainingHelper {
         System.out.println(String.format("Average Max Q-Value for sample states: %.3f", averageMaxQ));
     }
 
-    public void runTestSet() {
+    public void runTestSet(int frameCounter) {
 
         prepareForTesting();
 
@@ -192,8 +207,13 @@ public abstract class TrainingHelper {
             totalTestReward += totalReward;
         }
 
-        System.out.println(String.format("Average Test Reward: %.2f", totalTestReward/numTestEpisodes));
+        double averageReward = totalTestReward/numTestEpisodes;
+        highestAverageReward = Math.max(highestAverageReward, averageReward);
+        System.out.println(String.format("Average Test Reward: %.2f -- highest: %.2f", averageReward, highestAverageReward));
         System.out.println();
+
+        out.printf("Frame %d: %.2f\n", frameCounter, averageReward);
+        out.flush();
     }
 
     public Episode runEpisode(Policy policy) {

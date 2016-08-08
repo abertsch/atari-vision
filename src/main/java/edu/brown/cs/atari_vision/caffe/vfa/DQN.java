@@ -197,7 +197,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
             float delta_clip = 1;
             if (y - q > delta_clip) {
                 y = q + delta_clip;
-            } else if (q - y < -delta_clip) {
+            } else if (y - q < -delta_clip) {
                 y = q - delta_clip;
             }
             ys.put(index, y);

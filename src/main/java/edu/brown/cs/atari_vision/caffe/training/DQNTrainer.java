@@ -92,8 +92,8 @@ public class DQNTrainer extends TrainingHelper {
         // setup helper
         TrainingHelper helper = new DQNTrainer(deepQLearner, dqn, testPolicy, actionSet, env, trainingExperienceMemory, testExperienceMemory);
         helper.setTotalTrainingFrames(50000000);
-        helper.setTestInterval(100000);
-        helper.setNumTestEpisodes(10);
+        helper.setTestInterval(250000);
+        helper.setNumTestEpisodes(50);
         helper.setMaxEpisodeFrames(20000);
         helper.enableSnapshots("networks/dqn/breakout", 1000000);
 

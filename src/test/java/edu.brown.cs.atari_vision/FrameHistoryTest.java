@@ -48,7 +48,7 @@ public class FrameHistoryTest {
         String romPath = "/home/maroderi/projects/atari_roms/breakout.bin";
         String alePath = "/home/maroderi/projects/Arcade-Learning-Environment/ale";
 
-        int experienceMemoryLength = 1000;
+        int experienceMemoryLength = 100;
 
         Loader.load(caffe.Caffe.class);
 
@@ -74,7 +74,7 @@ public class FrameHistoryTest {
         List<EnvironmentOutcome> eoList = new ArrayList<>();
         List<FloatPointer> dataList = new ArrayList<>();
 
-        for (int step = 0; step < experienceMemory.experiences.length*4; step++) {
+        for (int step = 0; step < experienceMemory.experiences.length*40; step++) {
             State s = env.currentObservation();
             EnvironmentOutcome eo = env.executeAction(randomPolicy.action(s));
 

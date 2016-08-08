@@ -146,7 +146,7 @@ public class LearnWithData {
 
             // run test set
             if (s % testInterval == 0) {
-                helper.runTestSet();
+                helper.runTestSet(s);
             }
 
             if (usingStale) {
