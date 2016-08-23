@@ -39,15 +39,15 @@ public class LearnWithData {
     static final String SOLVER_FILE = "dqn_solver.prototxt";
     static final String ROM = "breakout.bin";
 
-    static final int staleDuration = 10000;
+    static final int staleDuration = 10000/4;
     static DQN staleDQN;
     static DQN dqn;
 
     public static void main(String[] args) {
         Loader.load(caffe.Caffe.class);
-        String dataDir = "/home/maroderi/projects/data/dqn_weight_data";
+        String dataDir = "/home/maroderi/projects/data/dqn_batch_data";
 
-        boolean usingStale = false;
+        boolean usingStale = true;
 
         int sampleSize = 32;
         int numActions = 4;
@@ -63,7 +63,12 @@ public class LearnWithData {
         ALEEnvironment env = new ALEEnvironment(domain, experienceMemory, ROM, 4, true);
 
         dqn = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);
-        staleDQN = (DQN) dqn.copy();
+        String sampleDir0 = String.format("%s/%d", dataDir, 0);
+        setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir0, "weights"));
+
+        staleDQN = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);// (DQN) dqn.copy();
+        setNetworkWeights(staleDQN.caffeNet, String.format("%s/%s", sampleDir0, "weights"));
+
         DQNPreProcessor preProcessor = new DQNPreProcessor();
 
         int testInterval = 250000/4;
@@ -75,11 +80,17 @@ public class LearnWithData {
 
         long time = System.currentTimeMillis();
         for (int s = 0; true; s++) {
+            if (usingStale) {
+                if (s % staleDuration == 0) {
+                    updateStaleFunction();
+                }
+            }
+
             String sampleDir = String.format("%s/%d", dataDir, s);
 
             String statesFile = String.format("%s/%s", sampleDir, "s.png");
 
-            setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir, "weights"));
+//            setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir, "weights"));
 
             preProcessor.convertDataToInput(loadImageData(statesFile).data(), dqn.stateInputs, 32*4);
 
@@ -111,8 +122,13 @@ public class LearnWithData {
                 maxQs = readFloatData(maxQFile, ",");
             }
 
+            // For getting the values for clipping
+            dqn.inputDataIntoLayers(dqn.stateInputs.position(0), dqn.dummyInputData, dqn.dummyInputData);
+            dqn.caffeNet.ForwardPrefilled();
+
             for (int i = 0; i < sampleSize; i++) {
-                int index = i*numActions + (actions[i] - 1); // because Lua is 1-indexed
+                int a = actions[i] - 1; // because Lua is 1-indexed
+                int index = i*numActions + a;
 
                 float y;
                 if (t[i] == 0) {
@@ -120,20 +136,33 @@ public class LearnWithData {
                 } else {
                     y = r[i];
                 }
+
+                float q = dqn.qValuesBlob.data_at(i, a, 0, 0);
+                float delta_clip = 1;
+                if (y - q > delta_clip) {
+                    y = q + delta_clip;
+                } else if (y - q < -delta_clip) {
+                    y = q - delta_clip;
+                }
+
                 ys.put(index, y);
                 actionFilter.put(index, 1);
             }
 
             // Backprop
             dqn.inputDataIntoLayers(dqn.stateInputs.position(0), actionFilter, ys);
-            dqn.caffeSolver.Step(1);
 //            dqn.caffeNet.ForwardPrefilled();
+            dqn.caffeNet.Backward();
 
             // Check weights
 //            String qFile = String.format("%s/%s", sampleDir, "q");
 //            float[] q = readFloatData(qFile);
-            System.out.println("----------");
-            Debug.printBlob(dqn.qValuesBlob);
+
+//            System.out.println("----------");
+//            Debug.printBlob(dqn.qValuesBlob);
+//            System.out.println("-------------");
+
+            dqn.caffeSolver.Step(1);
 
             FloatBlob outBlob = dqn.caffeNet.blob_by_name("states");
             if (s % outputInterval == 0) {
@@ -144,15 +173,20 @@ public class LearnWithData {
                 time = currentTime;
             }
 
+//            if (s % 1000 == 0) {
+//                float[] qs = new float[sampleSize*numActions];
+//                int i = 0;
+//                for (int n = 0; n < sampleSize; n++) {
+//                    for (int c = 0; c < numActions; c++) {
+//                        qs[i++] = dqn.qValuesBlob.data_at(n,c,0,0);
+//                    }
+//                }
+//                System.out.println("DONE!");
+//            }
+
             // run test set
             if (s % testInterval == 0) {
                 helper.runTestSet(s);
-            }
-
-            if (usingStale) {
-                if (s % staleDuration == 0) {
-                    updateStaleFunction();
-                }
             }
         }
     }

@@ -69,7 +69,7 @@ public abstract class TrainingHelper {
 
 
         try {
-            String fileName = "testResults";
+            String fileName = "rmsProp1";
             out = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
         } catch (FileNotFoundException e) {
             e.printStackTrace();

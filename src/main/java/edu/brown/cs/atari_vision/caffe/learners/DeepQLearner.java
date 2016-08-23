@@ -23,7 +23,7 @@ public class DeepQLearner extends ApproximateQLearning {
         super(domain, gamma, vfa);
 
         // Finds backup using previous parameters
-        this.useStaleTarget(40000);
+        this.useStaleTarget(10000);
 
         if (replayStartSize > 0) {
             System.out.println(String.format("Starting with random policy for %d frames", replayStartSize));
@@ -49,6 +49,9 @@ public class DeepQLearner extends ApproximateQLearning {
 
                 setLearningPolicy(trainingPolicy);
                 runningRandomPolicy = false;
+
+                // reset stale update timer
+                updateStaleFunction();
             }
 
             return;

@@ -1,13 +1,14 @@
 net: "dqn.prototxt"
 
-solver_type: RMSPROP
+solver_type: ADAM
 
 # 0.00025 * BATCH_SIZE = 0.00025 * 32
-base_lr: 0.008
+base_lr: 0.00025
 lr_policy: "fixed"
-momentum: 0.95
 rms_decay: 0.95
-delta: 0.01
+
+# 0.01 / BATCH_SIZE = 0.01 / 32 = 0.0003125
+delta: 0.0003125
 
 display: 50000
 
