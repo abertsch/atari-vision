@@ -8,8 +8,6 @@ lr_policy: "fixed"
 rms_decay: 0.95
 
 # 0.01 / BATCH_SIZE = 0.01 / 32 = 0.0003125
-delta: 0.0003125
+delta: 0.01
 
-display: 50000
-
-solver_mode: GPU
+solver_mode: CPU

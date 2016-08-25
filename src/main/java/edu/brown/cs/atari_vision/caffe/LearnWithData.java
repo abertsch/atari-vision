@@ -19,6 +19,7 @@ import org.bytedeco.javacpp.FloatPointer;
 import org.bytedeco.javacpp.IntPointer;
 import org.bytedeco.javacpp.Loader;
 import org.bytedeco.javacpp.caffe;
+import org.junit.Assert;
 
 import javax.imageio.ImageIO;
 import java.awt.image.BufferedImage;
@@ -45,9 +46,10 @@ public class LearnWithData {
 
     public static void main(String[] args) {
         Loader.load(caffe.Caffe.class);
-        String dataDir = "/home/maroderi/projects/data/dqn_batch_data";
+        String dataDir = "/home/maroderi/projects/data/dqn_weight_data";
 
         boolean usingStale = true;
+        boolean checking = false;
 
         int sampleSize = 32;
         int numActions = 4;
@@ -63,6 +65,7 @@ public class LearnWithData {
         ALEEnvironment env = new ALEEnvironment(domain, experienceMemory, ROM, 4, true);
 
         dqn = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);
+        DQN testDQN = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);
         String sampleDir0 = String.format("%s/%d", dataDir, 0);
         setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir0, "weights"));
 
@@ -87,6 +90,12 @@ public class LearnWithData {
             }
 
             String sampleDir = String.format("%s/%d", dataDir, s);
+
+//            if (s % 1 == 0 || (s > 400)) {
+//                System.out.println("---------------------");
+//                setNetworkWeights(testDQN.caffeNet, String.format("%s/%s", sampleDir, "weights"));
+//                verifyNetworkWeights(dqn.caffeNet, testDQN.caffeNet, 0.00001f, s);
+//            }
 
             String statesFile = String.format("%s/%s", sampleDir, "s.png");
 
@@ -151,7 +160,7 @@ public class LearnWithData {
 
             // Backprop
             dqn.inputDataIntoLayers(dqn.stateInputs.position(0), actionFilter, ys);
-//            dqn.caffeNet.ForwardPrefilled();
+            dqn.caffeNet.ForwardPrefilled();
             dqn.caffeNet.Backward();
 
             // Check weights
@@ -163,6 +172,15 @@ public class LearnWithData {
 //            System.out.println("-------------");
 
             dqn.caffeSolver.Step(1);
+
+            if (checking) {
+                if (s % 1 == 0 || (s > 400)) {
+                    testDQN.caffeNet.CopyTrainedLayersFrom(String.format("_iter_%d.caffemodel", s+1));
+                    verifyNetworkWeights(dqn.caffeNet, testDQN.caffeNet, 0, s);
+                }
+            } else {
+                dqn.caffeSolver.Snapshot();
+            }
 
             FloatBlob outBlob = dqn.caffeNet.blob_by_name("states");
             if (s % outputInterval == 0) {
@@ -186,7 +204,7 @@ public class LearnWithData {
 
             // run test set
             if (s % testInterval == 0) {
-                helper.runTestSet(s);
+//                helper.runTestSet(s);
             }
         }
     }
@@ -274,7 +292,7 @@ public class LearnWithData {
         int index = 0;
         for (int layer = 0; layer < 10; layer++) {
             FloatBlob blob = params.get(layer);
-            System.out.println(String.format("%d: %d,%d,%d,%d", layer, blob.num(), blob.channels(), blob.height(), blob.width()));
+//            System.out.println(String.format("%d: %d,%d,%d,%d", layer, blob.num(), blob.channels(), blob.height(), blob.width()));
             FloatPointer blobData = blob.cpu_data();
 
             int size = blob.count();
@@ -282,8 +300,8 @@ public class LearnWithData {
             index += size;
         }
 
-        int len = data.length;
-        System.out.printf("%f,%f,%f,%f", data[len-4], data[len-3], data[len-2], data[len-1]);
+//        int len = data.length;
+//        System.out.printf("%f,%f,%f,%f", data[len-4], data[len-3], data[len-2], data[len-1]);
     }
 
 //    public static void setNetworkWeights(FloatNet net, String weightDir) {
@@ -306,33 +324,38 @@ public class LearnWithData {
 //        verifyNetworkWeights(net, weightDir);
 //    }
 
-    public static void verifyNetworkWeights(FloatNet net, String weightDir) {
+    public static void verifyNetworkWeights(FloatNet net, FloatNet testNet, float delta, int step) {
         FloatBlobSharedVector params = net.params();
+        FloatBlobSharedVector testParams = testNet.params();
 
+        float max = 0;
+        int[] coords = new int[5];
         for (int i = 0; i < params.size(); i++) {
-            String fileName = String.format("%s/%d", weightDir, i+1);
-            float[] data = readFloatData(fileName, ",");
-
             FloatBlob blob = params.get(i);
+            FloatBlob testBlob = testParams.get(i);
 
-            int index = 0;
             for (int n = 0; n < blob.num(); n++) {
                 for (int c = 0; c < blob.channels(); c++) {
                     for (int h = 0; h < blob.height(); h++) {
                         for (int w = 0; w < blob.width(); w++) {
-                            if (blob.data_at(n, c, h, w) != data[index]) {
-                                System.out.printf("COPY ERROR: layer %d: %d,%d,%d,%d", i, n,c,h,w);
+                            float err = blob.data_at(n, c, h, w) - testBlob.data_at(n, c, h, w);
+                            if (max < err) {
+                                max = err;
+                                coords[0] = i;
+                                coords[1] = n;
+                                coords[2] = c;
+                                coords[3] = h;
+                                coords[4] = w;
                             }
-
-                            if (i == 6 && n == 0 && c == 0 && h ==0 && w == 0) {
-                                float f = data[index];
-                                System.out.println(f);
+                            if (Math.abs(err) > delta) {
+//                                System.out.printf("NOT EQUAL: layer %d: %d,%d,%d,%d\n", i, n,c,h,w);
                             }
-                            index++;
                         }
                     }
                 }
             }
         }
+
+        System.out.printf("%d: Delta %.10f, Max %.10f -- %d,%d,%d,%d,%d\n", step, delta, max, coords[0],coords[1],coords[2],coords[3],coords[4]);
     }
 }

@@ -4,9 +4,11 @@ import burlap.behavior.policy.Policy;
 import burlap.behavior.policy.RandomPolicy;
 import burlap.behavior.singleagent.Episode;
 import burlap.mdp.core.Action;
+import burlap.mdp.core.SimpleAction;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.environment.Environment;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
+import edu.brown.cs.atari_vision.ale.burlap.ALEEnvironment;
 import edu.brown.cs.atari_vision.ale.burlap.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
@@ -56,6 +58,8 @@ public abstract class TrainingHelper {
 
     PrintStream out;
 
+    Random rng = new Random();
+
 
     public TrainingHelper(DeepQLearner learner, DQN vfa, Policy testPolicy, ActionSet actionSet, Environment env) {
         this.learner = learner;
@@ -69,7 +73,7 @@ public abstract class TrainingHelper {
 
 
         try {
-            String fileName = "rmsProp1";
+            String fileName = "batchesResults";
             out = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
         } catch (FileNotFoundException e) {
             e.printStackTrace();
@@ -138,6 +142,9 @@ public abstract class TrainingHelper {
 
             prepareForTraining();
             env.resetEnvironment();
+            for (int i = rng.nextInt(32); i >= 1; i--) {
+                ((ALEEnvironment) env).io.act(0);
+            }
 
             long startTime = System.currentTimeMillis();
             Episode ea = learner.runLearningEpisode(env, Math.min(totalTrainingFrames - frameCounter, maxEpisodeFrames));

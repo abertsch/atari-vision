@@ -28,7 +28,7 @@ public class ALEEnvironment<StateT extends State> implements Environment {
     /** The UI used for displaying images and receiving actions */
     private AgentGUI ui;
     /** The I/O object used to communicate with ALE */
-    private ALEDriver io;
+    public ALEDriver io;
 
     protected ScreenConverter screenConverter;
 
