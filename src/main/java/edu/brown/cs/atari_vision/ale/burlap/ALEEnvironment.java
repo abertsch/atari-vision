@@ -38,10 +38,13 @@ public class ALEEnvironment<StateT extends State> implements Environment {
     protected StateT currentState;
     protected double lastReward;
     protected boolean isTerminal;
+    protected int currentLives;
 
     /** Parameters */
     protected boolean useGUI;
     protected String rom;
+
+    public boolean training = true;
 
     public ALEEnvironment(Domain domain, ALEStateGenerator stateGenerator, String rom, boolean useGUI) {
         this(domain, stateGenerator, rom, 1, useGUI);
@@ -111,7 +114,18 @@ public class ALEEnvironment<StateT extends State> implements Environment {
 
         // Update Environment State
         lastReward = rlData.reward;
-        isTerminal = rlData.isTerminal;
+        if (training) {
+            if (rlData.isTerminal) {
+                isTerminal = true;
+                currentLives = 0;
+            } else if (rlData.lives != currentLives) {
+                isTerminal = true;
+                currentLives = rlData.lives;
+            }
+        } else {
+            isTerminal = rlData.isTerminal;
+        }
+
         currentState = stateGenerator.nextState(screen, currentState, a, lastReward, isTerminal);
 
         // Record Screen for movie
@@ -132,8 +146,13 @@ public class ALEEnvironment<StateT extends State> implements Environment {
 
     @Override
     public void resetEnvironment() {
-        // perform reset action
-        io.act(Actions.map("system_reset"));
+        if (currentLives <= 0 || !training) {
+            // perform reset action
+            io.act(Actions.map("system_reset"));
+            RLData rlData = io.getRLData();
+            currentLives = rlData.lives;
+        }
+
         isTerminal = false;
 
         // reset initialState

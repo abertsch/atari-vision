@@ -50,6 +50,7 @@ public class FrameHistoryStateTest {
         BytePointer data6 = new BytePointer((byte)10, (byte)11);
         BytePointer data7 = new BytePointer((byte)12, (byte)13);
 
+        Mat frame0 = new Mat(1, 2, CV_8U, data0);
         Mat frame1 = new Mat(1, 2, CV_8U, data1);
         Mat frame2 = new Mat(1, 2, CV_8U, data2);
         Mat frame3 = new Mat(1, 2, CV_8U, data3);
@@ -65,7 +66,7 @@ public class FrameHistoryStateTest {
         Action action0 = actionSet.getAction(0);
 
         FrameExperienceMemory experienceMemory = new FrameExperienceMemory(5, 2, new TestPreprocessor(2), actionSet);
-        FrameHistoryState state0 = experienceMemory.initialState(null);
+        FrameHistoryState state0 = experienceMemory.initialState(frame0);
         FrameHistoryState state1 = experienceMemory.nextState(frame1, state0, action0, 0, false);
         FrameHistoryState state2 = experienceMemory.nextState(frame2, state1, action0, 0, false);
         FrameHistoryState state3 = experienceMemory.nextState(frame3, state2, action0, 0, false);
@@ -75,7 +76,6 @@ public class FrameHistoryStateTest {
         compare(state1, experienceMemory, new BytePointer[]{data0, data1}, 2);
         compare(state2, experienceMemory, new BytePointer[]{data1, data2}, 2);
         compare(state3, experienceMemory, new BytePointer[]{data2, data3}, 2);
-        compare(state4, experienceMemory, new BytePointer[]{data3, data4}, 2);
 
         FrameHistoryState state5 = experienceMemory.nextState(frame5, state4, action0, 0, false);
         FrameHistoryState state6 = experienceMemory.nextState(frame6, state5, action0, 0, false);
@@ -85,7 +85,6 @@ public class FrameHistoryStateTest {
         compare(state4, experienceMemory, new BytePointer[]{data3, data4}, 2);
         compare(state5, experienceMemory, new BytePointer[]{data4, data5}, 2);
         compare(state6, experienceMemory, new BytePointer[]{data5, data6}, 2);
-        compare(state7, experienceMemory, new BytePointer[]{data6, data7}, 2);
     }
 
     @Test

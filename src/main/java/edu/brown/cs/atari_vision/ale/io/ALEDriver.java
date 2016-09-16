@@ -286,6 +286,7 @@ public class ALEDriver {
         err = observe(frame);
         rlData.reward += this.rlData.reward;
         rlData.isTerminal |= this.rlData.isTerminal;
+        rlData.lives = this.rlData.lives;
 
         return err;
     }
@@ -328,6 +329,7 @@ public class ALEDriver {
         // Parse the terminal bit
         rlData.isTerminal = (Integer.parseInt(tokens[0]) == 1);
         rlData.reward = Integer.parseInt(tokens[1]);
+        rlData.lives = Integer.parseInt(tokens[2]);
     }
 
     /** Reads the console RAM from a string

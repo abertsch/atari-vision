@@ -63,11 +63,25 @@ public class FrameExperienceMemory implements ExperienceMemory, NNStateConverter
 
     @Override
     public FrameHistoryState initialState(Mat screen) {
-        return new FrameHistoryState(currentFrameIndex, 0);
+        return addFrame(screen, new FrameHistoryState(currentFrameIndex, 0));
     }
 
     @Override
     public FrameHistoryState nextState(Mat screen, FrameHistoryState prevState, Action action, double reward, boolean terminated) {
+        FrameHistoryState newState = null;
+        if (!terminated) {
+            newState = addFrame(screen, prevState);
+        }
+
+        // Add experience
+        experiences[next] = new FrameExperience(prevState, actionSet.map(action.actionName()), newState, reward, terminated);
+        next = (next+1) % experiences.length;
+        size = Math.min(size+1, experiences.length);
+
+        return newState;
+    }
+
+    public FrameHistoryState addFrame(Mat screen, FrameHistoryState prevState) {
         if (prevState.index != currentFrameIndex) {
             throw new IllegalStateException("You can only update the most recent state");
         }
@@ -103,10 +117,41 @@ public class FrameExperienceMemory implements ExperienceMemory, NNStateConverter
         // Update current frame index
         currentFrameIndex = newIndex;
 
-        // Add experience
-        experiences[next] = new FrameExperience(prevState, actionSet.map(action.actionName()), newState, reward, terminated);
-        next = (next+1) % experiences.length;
-        size = Math.min(size+1, experiences.length);
+        return newState;
+    }
+
+    public FrameHistoryState addData(BytePointer newData, FrameHistoryState prevState) {
+        if (prevState.index != currentFrameIndex) {
+            throw new IllegalStateException("You can only update the most recent state");
+        }
+
+        long outputSize = preProcessor.outputSize();
+        long frameHistoryDataSize = frameHistory.capacity();
+        long paddingSize = (maxHistoryLength - 1) * outputSize;
+
+        // Find new index
+        long newIndex = prevState.index + outputSize;
+        if (newIndex >= frameHistoryDataSize) {
+            // Copy the buffer to the start of the history
+            BytePointer frameHistoryCopy = new BytePointer(frameHistory);
+            frameHistory.position(0).limit(paddingSize).put(frameHistoryCopy.position(frameHistoryDataSize - paddingSize));
+            frameHistory.limit(frameHistory.capacity());
+
+            newIndex = paddingSize;
+        }
+
+        // Increment length if smaller than n
+        int newHistoryLength = prevState.historyLength >= maxHistoryLength ?
+                maxHistoryLength : prevState.historyLength + 1;
+
+        // Create new state
+        FrameHistoryState newState = new FrameHistoryState(newIndex, newHistoryLength);
+
+        // Place data in history
+        frameHistory.position(newIndex).put(newData.limit(outputSize));
+
+        // Update current frame index
+        currentFrameIndex = newIndex;
 
         return newState;
     }

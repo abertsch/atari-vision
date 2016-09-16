@@ -168,7 +168,7 @@ public class Debug {
 
     public static void saveStateAsSingleChannelImage(String fileName, BytePointer inputPtr, int channels) {
         opencv_core.Mat imgMat = new opencv_core.Mat(84*channels, 84, CV_8UC1);
-        imgMat.data().put(inputPtr);
+        imgMat.data().put(inputPtr.limit(inputPtr.position() + 84*84*channels));
 
         saveMatAsImage(fileName, imgMat);
     }

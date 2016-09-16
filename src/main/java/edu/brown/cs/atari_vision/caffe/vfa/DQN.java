@@ -35,7 +35,7 @@ import java.util.List;
  */
 public class DQN implements ParametricFunction.ParametricStateActionFunction, QProvider, Serializable {
 
-    static JFrame pongVisualizer = PongVisualizer.createPongVisualizer();
+//    static JFrame pongVisualizer = PongVisualizer.createPongVisualizer();
 
     /** If rewards are greater than this or less than the negative, they will be clipped */
     static final int REWARD_CLIP = 1;
@@ -157,7 +157,9 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
             int pos = i * inputSize;
             stateConverter.getStateInput(eo.o, stateInputs.position(pos));
 
-            stateConverter.getStateInput(eo.op, primeStateInputs.position(pos));
+            if (eo.op != null) {
+                stateConverter.getStateInput(eo.op, primeStateInputs.position(pos));
+            }
         }
 
         // Forward pass states
@@ -256,7 +258,7 @@ public class DQN implements ParametricFunction.ParametricStateActionFunction, QP
         }
 
         // DEBUG
-        PongVisualizer.setQValues(qValueList);
+//        PongVisualizer.setQValues(qValueList);
 
         return qValueList;
     }

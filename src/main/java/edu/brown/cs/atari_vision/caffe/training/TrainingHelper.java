@@ -10,6 +10,7 @@ import burlap.mdp.singleagent.environment.Environment;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
 import edu.brown.cs.atari_vision.ale.burlap.ALEEnvironment;
 import edu.brown.cs.atari_vision.ale.burlap.action.ActionSet;
+import edu.brown.cs.atari_vision.caffe.LearnWithData2;
 import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
 
@@ -73,7 +74,7 @@ public abstract class TrainingHelper {
 
 
         try {
-            String fileName = "batchesResults";
+            String fileName = "seaquest";
             out = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
         } catch (FileNotFoundException e) {
             e.printStackTrace();

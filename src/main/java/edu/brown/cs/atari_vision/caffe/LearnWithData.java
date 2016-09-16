@@ -49,11 +49,19 @@ public class LearnWithData {
         String dataDir = "/home/maroderi/projects/data/dqn_weight_data";
 
         boolean usingStale = true;
-        boolean checking = false;
+        boolean checking = true;
 
         int sampleSize = 32;
         int numActions = 4;
-        int outputInterval = 10000;
+        int outputInterval = 250000/4;
+
+        float[] w = new float[1686180];
+//        float[] q_all;
+//        float[] conv1 = new float[32*32*20*20];
+        float[] dw = new float[1686180];
+        float[] deltas = new float[1686180];
+        float[] targets;
+        float[] g2 = new float[1686180];
 
         // Create DQN
         ActionSet actionSet = Actions.breakoutActionSet();
@@ -65,12 +73,11 @@ public class LearnWithData {
         ALEEnvironment env = new ALEEnvironment(domain, experienceMemory, ROM, 4, true);
 
         dqn = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);
-        DQN testDQN = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);
         String sampleDir0 = String.format("%s/%d", dataDir, 0);
-        setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir0, "weights"));
+        setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir0, "w"));
 
         staleDQN = new DQN(SOLVER_FILE, actionSet, experienceMemory, 0.99);// (DQN) dqn.copy();
-        setNetworkWeights(staleDQN.caffeNet, String.format("%s/%s", sampleDir0, "weights"));
+        staleDQN.updateParamsToMatch(dqn);
 
         DQNPreProcessor preProcessor = new DQNPreProcessor();
 
@@ -91,15 +98,15 @@ public class LearnWithData {
 
             String sampleDir = String.format("%s/%d", dataDir, s);
 
-//            if (s % 1 == 0 || (s > 400)) {
-//                System.out.println("---------------------");
-//                setNetworkWeights(testDQN.caffeNet, String.format("%s/%s", sampleDir, "weights"));
-//                verifyNetworkWeights(dqn.caffeNet, testDQN.caffeNet, 0.00001f, s);
-//            }
+            if (s == 98) {
+                System.out.println("---------------------");
+                setFloatsFromFile(w, String.format("%s/%s", sampleDir, "w"));
+                verifyNetworkWeights(dqn.caffeNet, w, 0.00001f, s);
+            }
 
             String statesFile = String.format("%s/%s", sampleDir, "s.png");
 
-//            setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir, "weights"));
+//            setNetworkWeights(dqn.caffeNet, String.format("%s/%s", sampleDir, "w"));
 
             preProcessor.convertDataToInput(loadImageData(statesFile).data(), dqn.stateInputs, 32*4);
 
@@ -160,9 +167,42 @@ public class LearnWithData {
 
             // Backprop
             dqn.inputDataIntoLayers(dqn.stateInputs.position(0), actionFilter, ys);
-            dqn.caffeNet.ForwardPrefilled();
-            dqn.caffeNet.Backward();
 
+            if (s == 98) {
+                System.out.println("-----------------------------");
+                dqn.caffeNet.ClearParamDiffs();
+                dqn.caffeNet.ForwardPrefilled();
+
+//            setFloatsFromFile(conv1, String.format("%s/%s", sampleDir, "conv1"));
+//            verifyBlob(dqn.caffeNet.blob_by_name("conv1"), conv1, 0, s);
+//
+//            q_all = readFloatData(String.format("%s/%s", sampleDir, "q"), ",");
+//            verifyBlob(dqn.qValuesBlob, q_all, 0, s);
+
+                dqn.caffeNet.Backward();
+
+                setFloatsFromFile(dw, String.format("%s/%s", sampleDir, "dw"));
+                verifyNetworkDiffs(dqn.caffeNet, dw, 0, s);
+
+                targets = readFloatData(String.format("%s/%s", sampleDir, "target"), ",");
+                verifyBlobDiff(dqn.caffeNet.blobs().get(12), targets, 1.0f, s);
+
+                setFloatsFromFile(g2, String.format("%s/%s", sampleDir, "g2"));
+
+                float lr = 0.00025f;
+                float myG2 = ((FloatRMSPropSolver) dqn.caffeSolver).history().get(5).data_at(59,0,0,0) * 0.95f + (float)Math.pow(dqn.caffeNet.params().get(5).diff_at(59,0,0,0), 2);
+                float myRMS = calc_rms(lr, myG2, dqn.caffeNet.params().get(5).diff_at(59,0,0,0));
+                float theirRMS = calc_rms(lr, g2[77979], dw[77979]);
+                float err = myRMS - theirRMS;
+
+//                String sampleDirM1 = String.format("%s/%d", dataDir, s-1);
+//                setFloatsFromFile(g2, String.format("%s/%s", sampleDir, "g2"));
+//                verifyFloatBlobVector(((FloatRMSPropSolver) dqn.caffeSolver).history(), g2, 0, s);
+
+                System.out.print("");
+
+
+            }
             // Check weights
 //            String qFile = String.format("%s/%s", sampleDir, "q");
 //            float[] q = readFloatData(qFile);
@@ -173,22 +213,42 @@ public class LearnWithData {
 
             dqn.caffeSolver.Step(1);
 
-            if (checking) {
-                if (s % 1 == 0 || (s > 400)) {
-                    testDQN.caffeNet.CopyTrainedLayersFrom(String.format("_iter_%d.caffemodel", s+1));
-                    verifyNetworkWeights(dqn.caffeNet, testDQN.caffeNet, 0, s);
-                }
-            } else {
-                dqn.caffeSolver.Snapshot();
+
+            if (s == 98) {
+//                setFloatsFromFile(dw, String.format("%s/%s", sampleDir, "dw"));
+
+                setFloatsFromFile(deltas, String.format("%s/%s", sampleDir, "deltas"));
+                verifyNetworkDiffs(dqn.caffeNet, deltas, 0, s);
+
+                System.out.print("");
             }
 
-            FloatBlob outBlob = dqn.caffeNet.blob_by_name("states");
+//            setFloatsFromFile(deltas, String.format("%s/%s", sampleDir, "deltas"));
+//            negateFloats(deltas);
+//            setNetworkDiffs(dqn.caffeNet, deltas);
+//            negateFloats(deltas);
+//            verifyNetworkDiffs(dqn.caffeNet, deltas, 0, s);
+//            dqn.caffeNet.Update();
+
+//            if (checking) {
+//                if (s % 1 == 0 || (s > 400)) {
+//                    testDQN.caffeNet.CopyTrainedLayersFrom(String.format("_iter_%d.caffemodel", s+1));
+//                    verifyNetworkWeights(dqn.caffeNet, testDQN.caffeNet, 0, s);
+//                }
+//            } else {
+//                dqn.caffeSolver.Snapshot();
+//            }
+
+//            FloatBlob outBlob = dqn.caffeNet.blob_by_name("states");
             if (s % outputInterval == 0) {
                 long currentTime = System.currentTimeMillis();
-                float fps = outputInterval/((currentTime - time)/1000f);
+                float fps = outputInterval / ((currentTime - time) / 1000f);
                 System.out.printf("%d: %.2f steps/sec\n", s, fps);
 
                 time = currentTime;
+
+                String fileName = "weights_" + s;
+                saveWeights(dqn.caffeNet, fileName);
             }
 
 //            if (s % 1000 == 0) {
@@ -203,9 +263,9 @@ public class LearnWithData {
 //            }
 
             // run test set
-            if (s % testInterval == 0) {
-//                helper.runTestSet(s);
-            }
+//            if (s % testInterval == 0) {
+////                helper.runTestSet(s);
+//            }
         }
     }
 
@@ -229,6 +289,7 @@ public class LearnWithData {
         try {
             BufferedReader in = new BufferedReader(new FileReader(fileName));
             line = in.readLine();
+            in.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             return null;
@@ -248,6 +309,7 @@ public class LearnWithData {
             while ((line = in.readLine()) != null) {
                 lines.add(line);
             }
+            in.close();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
             return null;
@@ -277,17 +339,36 @@ public class LearnWithData {
         return data;
     }
 
-    public static void setNetworkWeights(FloatNet net, String weightFile) {
+    public static void setNetworkWeights(caffe.FloatNet net, String weightFile) {
 
-        FloatBlobSharedVector params = net.params();
+        caffe.FloatBlobSharedVector params = net.params();
 
         String[] layerParams = readStringLines(weightFile);
 
-        String[] stringData = layerParams[22].split(" ");
+        String[] stringData = layerParams[17].split(" ");
         float[] data = new float[stringData.length];
         for (int i = 0; i < stringData.length; i++) {
             data[i] = Float.valueOf(stringData[i]);
         }
+
+        int index = 0;
+        for (int layer = 0; layer < 10; layer++) {
+            caffe.FloatBlob blob = params.get(layer);
+//            System.out.println(String.format("%d: %d,%d,%d,%d", layer, blob.num(), blob.channels(), blob.height(), blob.width()));
+            FloatPointer blobData = blob.cpu_data();
+
+            int size = blob.count();
+            blobData.put(data, index, size);
+            index += size;
+        }
+
+//        int len = data.length;
+//        System.out.printf("%f,%f,%f,%f", data[len-4], data[len-3], data[len-2], data[len-1]);
+    }
+
+    public static void setNetworkWeights(FloatNet net, float[] data) {
+
+        FloatBlobSharedVector params = net.params();
 
         int index = 0;
         for (int layer = 0; layer < 10; layer++) {
@@ -302,6 +383,34 @@ public class LearnWithData {
 
 //        int len = data.length;
 //        System.out.printf("%f,%f,%f,%f", data[len-4], data[len-3], data[len-2], data[len-1]);
+    }
+
+    public static void setNetworkDiffs(FloatNet net, float[] data) {
+
+        FloatBlobSharedVector params = net.params();
+
+        int index = 0;
+        for (int layer = 0; layer < 10; layer++) {
+            FloatBlob blob = params.get(layer);
+//            System.out.println(String.format("%d: %d,%d,%d,%d", layer, blob.num(), blob.channels(), blob.height(), blob.width()));
+            FloatPointer blobData = blob.mutable_cpu_diff();
+
+            int size = blob.count();
+            blobData.put(data, index, size);
+            index += size;
+        }
+
+//        int len = data.length;
+//        System.out.printf("%f,%f,%f,%f", data[len-4], data[len-3], data[len-2], data[len-1]);
+    }
+
+    public static void setFloatsFromFile(float[] data, String fileName) {
+        String[] layerParams = readStringLines(fileName);
+
+        String[] stringData = layerParams[17].split(" ");
+        for (int i = 0; i < stringData.length; i++) {
+            data[i] = Float.valueOf(stringData[i]);
+        }
     }
 
 //    public static void setNetworkWeights(FloatNet net, String weightDir) {
@@ -324,21 +433,20 @@ public class LearnWithData {
 //        verifyNetworkWeights(net, weightDir);
 //    }
 
-    public static void verifyNetworkWeights(FloatNet net, FloatNet testNet, float delta, int step) {
+    public static void verifyNetworkWeights(FloatNet net, float[] data, float delta, int step) {
         FloatBlobSharedVector params = net.params();
-        FloatBlobSharedVector testParams = testNet.params();
 
         float max = 0;
         int[] coords = new int[5];
+        int index = 0;
         for (int i = 0; i < params.size(); i++) {
             FloatBlob blob = params.get(i);
-            FloatBlob testBlob = testParams.get(i);
 
             for (int n = 0; n < blob.num(); n++) {
                 for (int c = 0; c < blob.channels(); c++) {
                     for (int h = 0; h < blob.height(); h++) {
                         for (int w = 0; w < blob.width(); w++) {
-                            float err = blob.data_at(n, c, h, w) - testBlob.data_at(n, c, h, w);
+                            float err = Math.abs(blob.data_at(n, c, h, w) - data[index++]);
                             if (max < err) {
                                 max = err;
                                 coords[0] = i;
@@ -356,6 +464,183 @@ public class LearnWithData {
             }
         }
 
-        System.out.printf("%d: Delta %.10f, Max %.10f -- %d,%d,%d,%d,%d\n", step, delta, max, coords[0],coords[1],coords[2],coords[3],coords[4]);
+        System.out.printf("%d: Data Max %.5e -- %d,%d,%d,%d,%d\n", step, max, coords[0],coords[1],coords[2],coords[3],coords[4]);
+    }
+
+    public static void verifyNetworkDiffs(FloatNet net, float[] data, float delta, int step) {
+        FloatBlobSharedVector params = net.params();
+
+        float max = 0;
+        int[] coords = new int[5];
+        int index = 0;
+        int maxIndex = index;
+        for (int i = 0; i < params.size(); i++) {
+            FloatBlob blob = params.get(i);
+
+            for (int n = 0; n < blob.num(); n++) {
+                for (int c = 0; c < blob.channels(); c++) {
+                    for (int h = 0; h < blob.height(); h++) {
+                        for (int w = 0; w < blob.width(); w++) {
+                            float datum = data[index++];
+                            float diff = blob.diff_at(n, c, h, w);
+                            float err = Math.abs(diff + datum);
+                            if (max < err) {
+                                max = err;
+                                coords[0] = i;
+                                coords[1] = n;
+                                coords[2] = c;
+                                coords[3] = h;
+                                coords[4] = w;
+                                maxIndex = index - 1;
+                            }
+
+                            if (err > delta) {
+                                System.out.print("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        System.out.printf("%d: Diff Max %.5e -- %d,%d,%d,%d,%d -- %d\n", step, max, coords[0],coords[1],coords[2],coords[3],coords[4], maxIndex);
+    }
+
+    public static void verifyBlob(FloatBlob blob, float[] data, float delta, int step) {
+
+        float max = 0;
+        int[] coords = new int[5];
+        int index = 0;
+        for (int n = 0; n < blob.num(); n++) {
+            for (int c = 0; c < blob.channels(); c++) {
+                for (int h = 0; h < blob.height(); h++) {
+                    for (int w = 0; w < blob.width(); w++) {
+                        float datum = blob.data_at(n, c, h, w);
+                        float datum2 = data[index++];
+                        float err = Math.abs(datum - datum2);
+                        if (max < err) {
+                            max = err;
+                            coords[1] = n;
+                            coords[2] = c;
+                            coords[3] = h;
+                            coords[4] = w;
+                        }
+
+                        if (err > delta) {
+                            System.out.print("");
+                        }
+                    }
+                }
+            }
+        }
+
+        System.out.printf("%d: Blob Max %.10f -- %d,%d,%d,%d,%d\n", step, max, coords[0],coords[1],coords[2],coords[3],coords[4]);
+    }
+
+    public static void verifyBlobDiff(FloatBlob blob, float[] data, float delta, int step) {
+
+        float max = 0;
+        int[] coords = new int[5];
+        int index = 0;
+        for (int n = 0; n < blob.num(); n++) {
+            for (int c = 0; c < blob.channels(); c++) {
+                for (int h = 0; h < blob.height(); h++) {
+                    for (int w = 0; w < blob.width(); w++) {
+                        float datum = blob.diff_at(n, c, h, w);
+                        float datum2 = data[index++];
+                        float err = Math.abs(datum + datum2);
+                        if (max < err) {
+                            max = err;
+                            coords[1] = n;
+                            coords[2] = c;
+                            coords[3] = h;
+                            coords[4] = w;
+                        }
+
+                        if (err > delta) {
+                            System.out.print("");
+                        }
+                    }
+                }
+            }
+        }
+
+        System.out.printf("%d: Blob Max %.5e -- %d,%d,%d,%d,%d\n", step, max, coords[0],coords[1],coords[2],coords[3],coords[4]);
+    }
+
+    public static void saveWeights(FloatNet net, String fileName) {
+        PrintStream out;
+        try {
+            out = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            return;
+        }
+
+        FloatBlobSharedVector params = net.params();
+
+        for (int i = 0; i < params.size(); i++) {
+            FloatBlob blob = params.get(i);
+
+            for (int n = 0; n < blob.num(); n++) {
+                for (int c = 0; c < blob.channels(); c++) {
+                    for (int h = 0; h < blob.height(); h++) {
+                        for (int w = 0; w < blob.width(); w++) {
+                            out.printf("%s ", Float.toString(blob.data_at(n, c, h, w)));
+                        }
+                    }
+                }
+            }
+        }
+
+        out.flush();
+        out.close();
+    }
+
+    public static void verifyFloatBlobVector(FloatBlobSharedVector vector, float[] data, float delta, int step) {
+        float max = 0;
+        int[] coords = new int[5];
+        int index = 0;
+        int maxIndex = index;
+        for (int i = 0; i < vector.size(); i++) {
+            FloatBlob blob = vector.get(i);
+
+            for (int n = 0; n < blob.num(); n++) {
+                for (int c = 0; c < blob.channels(); c++) {
+                    for (int h = 0; h < blob.height(); h++) {
+                        for (int w = 0; w < blob.width(); w++) {
+                            float datum = data[index++];
+                            float diff = blob.data_at(n, c, h, w);
+                            float err = Math.abs(diff - datum);
+                            if (max < err) {
+                                max = err;
+                                coords[0] = i;
+                                coords[1] = n;
+                                coords[2] = c;
+                                coords[3] = h;
+                                coords[4] = w;
+                                maxIndex = index-1;
+                            }
+
+                            if (err > delta) {
+                                System.out.print("");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        System.out.printf("%d: Blob Max %.5e -- %d,%d,%d,%d,%d -- %d\n", step, max, coords[0],coords[1],coords[2],coords[3],coords[4], maxIndex);
+    }
+
+    public static float calc_rms(float lr, float g2, float dw) {
+        return (lr * dw / ((float)Math.sqrt(g2) + 0.01f));
+    }
+
+    public static void negateFloats(float[] data) {
+        for (int i = 0; i < data.length; i++) {
+            data[i] = -data[i];
+        }
     }
 }

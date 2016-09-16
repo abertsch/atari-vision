@@ -25,7 +25,7 @@ import static org.bytedeco.javacpp.caffe.*;
 public class DQNTrainer extends TrainingHelper {
 
     static final String SOLVER_FILE = "dqn_solver.prototxt";
-    static final String ROM = "breakout.bin";
+    static final String ROM = "seaquest.bin";
     static final boolean GUI = true;
 
     static final int experienceMemoryLength = 1000000;
@@ -55,6 +55,7 @@ public class DQNTrainer extends TrainingHelper {
     @Override
     public void prepareForTraining() {
         ((ALEEnvironment<FrameHistoryState>)this.env).setStateGenerator(trainingMemory);
+        ((ALEEnvironment<FrameHistoryState>)this.env).training = true;
 
         vfa.stateConverter = trainingMemory;
     }
@@ -62,6 +63,7 @@ public class DQNTrainer extends TrainingHelper {
     @Override
     public void prepareForTesting() {
         ((ALEEnvironment<FrameHistoryState>)this.env).setStateGenerator(testMemory);
+        ((ALEEnvironment<FrameHistoryState>)this.env).training = false;
 
         vfa.stateConverter = testMemory;
     }
@@ -70,7 +72,7 @@ public class DQNTrainer extends TrainingHelper {
 
         Loader.load(Caffe.class);
 
-        ActionSet actionSet = Actions.breakoutActionSet();
+        ActionSet actionSet = Actions.saActionSet();
 
         ALEDomainGenerator domGen = new ALEDomainGenerator(actionSet);
         SADomain domain = domGen.generateDomain();

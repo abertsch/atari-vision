@@ -26,4 +26,6 @@ public class RLData {
     public int reward;
     /** Indicates the end of an episode */
     public boolean isTerminal;
+
+    public int lives;
 }
