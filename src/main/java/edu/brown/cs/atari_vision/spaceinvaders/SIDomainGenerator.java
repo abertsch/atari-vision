@@ -1,14 +1,14 @@
 package edu.brown.cs.atari_vision.spaceinvaders;
 
 import burlap.mdp.auxiliary.DomainGenerator;
-import burlap.mdp.core.SimpleAction;
+import burlap.mdp.core.action.ActionType;
+import burlap.mdp.core.action.SimpleAction;
 import burlap.mdp.core.oo.OODomain;
 import burlap.mdp.core.oo.propositional.PropositionalFunction;
 import burlap.mdp.core.oo.state.OOState;
 import burlap.mdp.core.oo.state.ObjectInstance;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.SADomain;
-import burlap.mdp.singleagent.action.ActionType;
 import burlap.mdp.singleagent.oo.OOSADomain;
 import burlap.visualizer.*;
 import edu.brown.cs.atari_vision.ale.burlap.ALEDomainConstants;

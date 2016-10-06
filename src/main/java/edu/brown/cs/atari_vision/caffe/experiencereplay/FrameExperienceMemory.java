@@ -1,7 +1,7 @@
 package edu.brown.cs.atari_vision.caffe.experiencereplay;
 
 import burlap.debugtools.RandomFactory;
-import burlap.mdp.core.Action;
+import burlap.mdp.core.action.Action;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
 import edu.brown.cs.atari_vision.ale.burlap.ALEStateGenerator;
 import edu.brown.cs.atari_vision.ale.burlap.action.ActionSet;

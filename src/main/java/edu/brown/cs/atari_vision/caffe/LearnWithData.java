@@ -85,7 +85,7 @@ public class LearnWithData {
         Policy testPolicy = new EpsilonGreedy(dqn, 0.05);
         // setup helper
         TrainingHelper helper = new SimpleTrainer(null, dqn, testPolicy, actionSet, env);
-        helper.setNumTestEpisodes(50);
+        helper.setTotalTestSteps(125000);
         helper.setMaxEpisodeFrames(200000);
 
         long time = System.currentTimeMillis();

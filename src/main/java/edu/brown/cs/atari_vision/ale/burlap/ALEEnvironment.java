@@ -1,6 +1,6 @@
 package edu.brown.cs.atari_vision.ale.burlap;
 
-import burlap.mdp.core.Action;
+import burlap.mdp.core.action.Action;
 import burlap.mdp.core.Domain;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.environment.Environment;

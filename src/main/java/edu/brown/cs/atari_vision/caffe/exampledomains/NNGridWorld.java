@@ -110,8 +110,7 @@ public class NNGridWorld {
         TrainingHelper helper = new SimpleTrainer(deepQLearner, nnGridWorld.dqn, testPolicy, actionSet, nnGridWorld.env);
         helper.setTotalTrainingFrames(50000000);
         helper.setTestInterval(500000);
-        helper.setNumTestEpisodes(5);
-        helper.setNumSampleStates(1000);
+        helper.setTotalTestSteps(125000);
         helper.setMaxEpisodeFrames(10000);
 
         // run helper

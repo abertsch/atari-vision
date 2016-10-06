@@ -1,7 +1,7 @@
 package edu.brown.cs.atari_vision.spaceinvaders;
 
 import burlap.behavior.policy.Policy;
-import burlap.mdp.core.Action;
+import burlap.mdp.core.action.Action;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.SADomain;
 import burlap.shell.visual.VisualExplorer;

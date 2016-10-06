@@ -1,6 +1,6 @@
 package edu.brown.cs.atari_vision;
 
-import burlap.mdp.core.Action;
+import burlap.mdp.core.action.Action;
 import edu.brown.cs.atari_vision.ale.burlap.action.ActionSet;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameExperienceMemory;
 import edu.brown.cs.atari_vision.caffe.experiencereplay.FrameHistoryState;
@@ -76,6 +76,7 @@ public class FrameHistoryStateTest {
         compare(state1, experienceMemory, new BytePointer[]{data0, data1}, 2);
         compare(state2, experienceMemory, new BytePointer[]{data1, data2}, 2);
         compare(state3, experienceMemory, new BytePointer[]{data2, data3}, 2);
+        compare(state4, experienceMemory, new BytePointer[]{data3, data4}, 2);
 
         FrameHistoryState state5 = experienceMemory.nextState(frame5, state4, action0, 0, false);
         FrameHistoryState state6 = experienceMemory.nextState(frame6, state5, action0, 0, false);
@@ -85,6 +86,7 @@ public class FrameHistoryStateTest {
         compare(state4, experienceMemory, new BytePointer[]{data3, data4}, 2);
         compare(state5, experienceMemory, new BytePointer[]{data4, data5}, 2);
         compare(state6, experienceMemory, new BytePointer[]{data5, data6}, 2);
+        compare(state7, experienceMemory, new BytePointer[]{data6, data7}, 2);
     }
 
     @Test
@@ -98,7 +100,6 @@ public class FrameHistoryStateTest {
         Action action0 = actionSet.getAction(0);
 
         FrameExperienceMemory experienceMemory = new FrameExperienceMemory(replaySize, history, new TestPreprocessor(frameSize), actionSet);
-        FrameHistoryState initialState = experienceMemory.initialState(null);
         BytePointer data0 = new BytePointer(history);
         for (int f = 0; f < frameSize; f++) {
             data0.position(f).put((byte)0);
@@ -108,13 +109,12 @@ public class FrameHistoryStateTest {
         for (int h = 0; h < history; h++) {
             dataList.add(data0);
         }
-        compare(initialState, experienceMemory, dataList.toArray(new BytePointer[history]), frameSize);
 
         List<List<BytePointer>> dataListList = new ArrayList<>();
 
         List<FrameHistoryState> states = new ArrayList<>();
 
-        FrameHistoryState prevState = initialState;
+        FrameHistoryState prevState = null;
 
         for (int n = 0; n < 100; n++) {
             for (int i = 0; i < replaySize; i++) {
@@ -129,7 +129,12 @@ public class FrameHistoryStateTest {
 
                 Mat frame = new Mat(1, frameSize, CV_8U, data);
 
-                FrameHistoryState state = experienceMemory.nextState(frame, prevState, action0, 0, false);
+                FrameHistoryState state;
+                if (prevState == null) {
+                    state = experienceMemory.initialState(frame);
+                } else {
+                    state = experienceMemory.nextState(frame, prevState, action0, 0, false);
+                }
                 prevState = state;
 
                 compare(state, experienceMemory, dataList.toArray(new BytePointer[history]), frameSize);

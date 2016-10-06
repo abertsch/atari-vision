@@ -1,6 +1,7 @@
 package edu.brown.cs.atari_vision.spaceinvaders;
 
-import burlap.mdp.core.Action;
+
+import burlap.mdp.core.action.Action;
 import burlap.mdp.core.oo.state.ObjectInstance;
 import edu.brown.cs.atari_vision.ale.burlap.ALEDomainConstants;
 import edu.brown.cs.atari_vision.ale.burlap.ALEStateGenerator;

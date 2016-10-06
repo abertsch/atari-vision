@@ -24,6 +24,8 @@ import static org.bytedeco.javacpp.caffe.*;
  */
 public class DQNTrainer extends TrainingHelper {
 
+    static final boolean TERMINATE_ON_END_LIFE = true;
+
     static final String SOLVER_FILE = "dqn_solver.prototxt";
     static final String ROM = "seaquest.bin";
     static final boolean GUI = true;
@@ -55,7 +57,9 @@ public class DQNTrainer extends TrainingHelper {
     @Override
     public void prepareForTraining() {
         ((ALEEnvironment<FrameHistoryState>)this.env).setStateGenerator(trainingMemory);
-        ((ALEEnvironment<FrameHistoryState>)this.env).training = true;
+        if (TERMINATE_ON_END_LIFE) {
+            ((ALEEnvironment<FrameHistoryState>)this.env).training = true;
+        }
 
         vfa.stateConverter = trainingMemory;
     }
@@ -63,7 +67,9 @@ public class DQNTrainer extends TrainingHelper {
     @Override
     public void prepareForTesting() {
         ((ALEEnvironment<FrameHistoryState>)this.env).setStateGenerator(testMemory);
-        ((ALEEnvironment<FrameHistoryState>)this.env).training = false;
+        if (TERMINATE_ON_END_LIFE) {
+            ((ALEEnvironment<FrameHistoryState>) this.env).training = false;
+        }
 
         vfa.stateConverter = testMemory;
     }
@@ -79,6 +85,11 @@ public class DQNTrainer extends TrainingHelper {
 
         FrameExperienceMemory trainingExperienceMemory = new FrameExperienceMemory(experienceMemoryLength, maxHistoryLength, new DQNPreProcessor(), actionSet);
         ALEEnvironment env = new ALEEnvironment(domain, trainingExperienceMemory, ROM, frameSkip, GUI);
+        if (TERMINATE_ON_END_LIFE) {
+            env.training = true;
+        } else {
+            env.training = false;
+        }
 
         FrameExperienceMemory testExperienceMemory = new FrameExperienceMemory(10000, maxHistoryLength, new DQNPreProcessor(), actionSet);
 
@@ -94,10 +105,11 @@ public class DQNTrainer extends TrainingHelper {
         // setup helper
         TrainingHelper helper = new DQNTrainer(deepQLearner, dqn, testPolicy, actionSet, env, trainingExperienceMemory, testExperienceMemory);
         helper.setTotalTrainingFrames(50000000);
-        helper.setTestInterval(250000);
-        helper.setNumTestEpisodes(50);
-        helper.setMaxEpisodeFrames(20000);
-        helper.enableSnapshots("networks/dqn/breakout", 1000000);
+        helper.setTestInterval(250000); // TODO: 250000
+        helper.setTotalTestSteps(125000); // TODO: 125000
+        helper.setMaxEpisodeFrames(100000);
+        helper.enableSnapshots("networks/dqn/breakout", 5000000); // TODO: 5000000
+        helper.recordResultsTo("results/seaquest");
 
 //        helper.loadLearningState("networks/dqn/breakout", "_iter_6928650.solverstate");
 

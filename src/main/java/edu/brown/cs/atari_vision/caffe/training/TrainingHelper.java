@@ -1,10 +1,12 @@
 package edu.brown.cs.atari_vision.caffe.training;
 
 import burlap.behavior.policy.Policy;
+import burlap.behavior.policy.PolicyUtils;
 import burlap.behavior.policy.RandomPolicy;
 import burlap.behavior.singleagent.Episode;
-import burlap.mdp.core.Action;
-import burlap.mdp.core.SimpleAction;
+
+import burlap.mdp.core.action.Action;
+import burlap.mdp.core.action.SimpleAction;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.environment.Environment;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
@@ -14,12 +16,14 @@ import edu.brown.cs.atari_vision.caffe.LearnWithData2;
 import edu.brown.cs.atari_vision.caffe.learners.DeepQLearner;
 import edu.brown.cs.atari_vision.caffe.vfa.DQN;
 
+import static java.nio.file.StandardCopyOption.REPLACE_EXISTING;
 import static org.bytedeco.javacpp.caffe.*;
 
 import java.io.*;
 import java.nio.DoubleBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
+import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -43,23 +47,22 @@ public abstract class TrainingHelper {
     int totalTrainingFrames = 10000000;
 
     int testInterval = 100000;
-    int numTestEpisodes = 10;
+    int totalTestSteps = 10;
 
     String snapshotPrefix;
     int snapshotInterval = -1;
-
-
-    List<State> sampleStates;
-    int numSampleStates = -1;
 
     int frameCounter;
     int episodeCounter;
 
     double highestAverageReward = Double.NEGATIVE_INFINITY;
-
-    PrintStream out;
+    double lowestAverageReward = Double.POSITIVE_INFINITY;
 
     Random rng = new Random();
+
+    public String resultsPrefix;
+    protected PrintStream testOutput;
+
 
 
     public TrainingHelper(DeepQLearner learner, DQN vfa, Policy testPolicy, ActionSet actionSet, Environment env) {
@@ -71,30 +74,17 @@ public abstract class TrainingHelper {
 
         this.frameCounter = 0;
         this.episodeCounter = 0;
-
-
-        try {
-            String fileName = "seaquest";
-            out = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return;
-        }
     }
 
     public abstract void prepareForTraining();
     public abstract void prepareForTesting();
 
-    public void setNumSampleStates(int n) {
-        numSampleStates = n;
+    public void setTotalTestSteps(int n) {
+        totalTestSteps = n;
     }
 
     public void setTotalTrainingFrames(int n) {
         totalTrainingFrames = n;
-    }
-
-    public void setNumTestEpisodes(int n) {
-        numTestEpisodes = n;
     }
 
     public void setTestInterval(int i) {
@@ -110,30 +100,25 @@ public abstract class TrainingHelper {
         this.snapshotInterval = snapshotInterval;
     }
 
-    public void run() {
-        if (numSampleStates > 0) {
-            System.out.println("Sampling random states");
-            prepareForTesting();
-
-            // Take a random sample of states
-            Policy randomPolicy = new RandomPolicy(actionSet.actionTypeList());
-            sampleStates = new ArrayList<>(numSampleStates);
-
-            while (sampleStates.size() < numSampleStates) {
-                // Run a random episode
-                Episode ea = runEpisode(randomPolicy);
-                int episodeSize = ea.numTimeSteps();
-
-                // Random sample of unique states from the episode
-                Random rng = new Random();
-                int numStatesToAdd = Math.min(episodeSize, numSampleStates - sampleStates.size());
-                for (int i = 0; i < numStatesToAdd; i++) {
-                    sampleStates.add(ea.state(rng.nextInt(episodeSize)));
-                }
-            }
-
-            querySampleQs();
+    public void recordResultsTo(String resultsPrefix) {
+        File dir = new File(resultsPrefix);
+        if (!dir.exists() && !dir.mkdirs()) {
+            throw new RuntimeException(String.format("Could not create the directory: %s", resultsPrefix));
         }
+
+        this.resultsPrefix = resultsPrefix;
+
+        try {
+            String fileName = new File(resultsPrefix, "testResults").toString();
+            testOutput = new PrintStream(new BufferedOutputStream(new FileOutputStream(fileName)));
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+
+            throw new RuntimeException(String.format("Can't open %s", resultsPrefix));
+        }
+    }
+
+    public void run() {
 
         int testCountDown = testInterval;
         int snapshotCountDown = snapshotInterval;
@@ -179,49 +164,95 @@ public abstract class TrainingHelper {
         System.out.println("Done Training!");
     }
 
-    public void querySampleQs() {
-        double totalMaxQ = 0;
-        for (State state : sampleStates) {
-            FloatBlob qVals = vfa.qValuesForState(state);
-            totalMaxQ += vfa.blobMax(qVals, 0);
-        }
-
-        double averageMaxQ = totalMaxQ/numSampleStates;
-        System.out.println(String.format("Average Max Q-Value for sample states: %.3f", averageMaxQ));
-    }
+//    public void querySampleQs() {
+//        double totalMaxQ = 0;
+//        for (State state : sampleStates) {
+//            FloatBlob qVals = vfa.qValuesForState(state);
+//            totalMaxQ += vfa.blobMax(qVals, 0);
+//        }
+//
+//        double averageMaxQ = totalMaxQ/numSampleStates;
+//        System.out.println(String.format("Average Max Q-Value for sample states: %.3f", averageMaxQ));
+//    }
 
     public void runTestSet(int frameCounter) {
 
         prepareForTesting();
 
-        // Test the MaxQValues of the sample states
-        if (sampleStates != null) {
-            querySampleQs();
-        }
-
-
         // Run the test policy on test episodes
         System.out.println("Running Test Set...");
+        int numSteps = 0;
+        int numEpisodes = 0;
         double totalTestReward = 0;
-        for (int e = 1; e <= numTestEpisodes; e++) {
-            Episode ea = runEpisode(testPolicy);
+        while (true) {
+            env.resetEnvironment();
+            Episode e = PolicyUtils.rollout(testPolicy, env, Math.min(maxEpisodeFrames, totalTestSteps - numSteps));
 
             double totalReward = 0;
-            for (double reward : ea.rewardSequence) {
+            for (double reward : e.rewardSequence) {
                 totalReward += reward;
             }
 
-            System.out.println(String.format("%d: Reward = %.2f", e, totalReward));
+            System.out.println(String.format("%d: Reward = %.2f, Steps = %d", numEpisodes, totalReward, numSteps));
+
+            numSteps += e.numTimeSteps();
+            if (numSteps >= totalTestSteps) {
+                if (numEpisodes == 0) {
+                    totalTestReward = totalReward;
+                    numEpisodes = 1;
+                }
+                break;
+            }
+
             totalTestReward += totalReward;
+            numEpisodes += 1;
         }
 
-        double averageReward = totalTestReward/numTestEpisodes;
-        highestAverageReward = Math.max(highestAverageReward, averageReward);
+        double averageReward = totalTestReward/numEpisodes;
+        if (averageReward > highestAverageReward) {
+            if (resultsPrefix != null) {
+                snapshot(new File(resultsPrefix, "best_net.caffemodel").toString(),  null);
+            }
+            highestAverageReward = averageReward;
+        }
+        if (frameCounter > 30000000 && averageReward < lowestAverageReward) {
+            if (resultsPrefix != null) {
+                snapshot(new File(resultsPrefix, "worst_net.caffemodel").toString(),  null);
+            }
+            lowestAverageReward = averageReward;
+        }
+
         System.out.println(String.format("Average Test Reward: %.2f -- highest: %.2f", averageReward, highestAverageReward));
         System.out.println();
 
-        out.printf("Frame %d: %.2f\n", frameCounter, averageReward);
-        out.flush();
+        testOutput.printf("Frame %d: %.2f\n", frameCounter, averageReward);
+        testOutput.flush();
+    }
+
+    public void snapshot(String modelFileName, String solverFileName) {
+        vfa.caffeSolver.Snapshot();
+
+        // get file names
+        int iter = vfa.caffeSolver.iter();
+        String modelFile = String.format("_iter_%d.caffemodel", iter);
+        String solverFile = String.format("_iter_%d.solverstate", iter);
+
+        // move Caffe files
+        try {
+            if (modelFileName != null) {
+                Files.move(Paths.get(modelFile), Paths.get(modelFileName), REPLACE_EXISTING);
+            } else {
+                Files.delete(Paths.get(modelFile));
+            }
+
+            if (solverFileName != null) {
+                Files.move(Paths.get(solverFile), Paths.get(solverFileName), REPLACE_EXISTING);
+            } else {
+                Files.delete(Paths.get(solverFile));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public Episode runEpisode(Policy policy) {

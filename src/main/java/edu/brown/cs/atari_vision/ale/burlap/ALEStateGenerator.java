@@ -1,6 +1,6 @@
 package edu.brown.cs.atari_vision.ale.burlap;
 
-import burlap.mdp.core.Action;
+import burlap.mdp.core.action.Action;
 import burlap.mdp.core.state.State;
 
 import static org.bytedeco.javacpp.opencv_core.*;

@@ -3,8 +3,9 @@ package edu.brown.cs.atari_vision.caffe.vfa;
 import burlap.behavior.functionapproximation.ParametricFunction;
 import burlap.behavior.valuefunction.QProvider;
 import burlap.behavior.valuefunction.QValue;
-import burlap.mdp.core.Action;
-import burlap.mdp.core.SimpleAction;
+
+import burlap.mdp.core.action.Action;
+import burlap.mdp.core.action.SimpleAction;
 import burlap.mdp.core.state.State;
 import burlap.mdp.singleagent.environment.EnvironmentOutcome;
 import edu.brown.cs.atari_vision.ale.burlap.action.ActionSet;
